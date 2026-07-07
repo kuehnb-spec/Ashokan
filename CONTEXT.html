@@ -29,13 +29,13 @@
   "updated": "2026-07-07",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
-  "summary": "v0.1 skeleton built and running: NSDocument-based AppKit app with a WKWebView+ProseMirror WYSIWYG pane and a toggleable native source pane (⌘/). Core lossless round-trip layer works — head preserved byte-for-byte, attribute bags on all supported elements, unknown markup carried as protected islands. Headless fidelity test (scripts/roundtrip-test.swift) passes 11/11. Not yet visually verified by Brant.",
+  "summary": "v0.1 built, visually verified (screenshots), launch bugs fixed: NSDocument-based AppKit app with WKWebView+ProseMirror WYSIWYG pane and toggleable native source pane (⌘/). Lossless round-trip works (11/11 headless fidelity checks). Demo memo renders with its own stylesheet in a native window with full toolbar. Roadmap brainstormed with Brant → docs/ROADMAP.html: review mode (tracked changes as standard ins/del + comments), images/tables, print-quality PDF export, recents launcher with thumbnails, iOS companion via iCloud Drive.",
   "next": [
-    { "text": "Brant: launch the app (scripts/build.sh, then open the built app with samples/demo-memo.html) and give first impressions.", "priority": "high" },
-    { "text": "Table creation + row/column commands (editing existing tables already works).", "priority": "med" },
-    { "text": "Syntax highlighting in the source pane.", "priority": "med" },
-    { "text": "Find & replace across both panes.", "priority": "med" },
-    { "text": "Preserve colgroup and table caption (currently dropped/islanded inside tables).", "priority": "med" }
+    { "text": "Brant: try the app (it's open with samples/demo-memo.html) and pick the first roadmap feature to build. Recommended order: images/tables → recents launcher → PDF export → review mode → iOS.", "priority": "high" },
+    { "text": "Images & tables: insert/drag/paste images (data-URI default), figure/figcaption, table grid picker + row/col/merge commands.", "priority": "med" },
+    { "text": "Recents launcher: welcome window with thumbnail cards (WKWebView snapshots), filename + path + date.", "priority": "med" },
+    { "text": "PDF export with pagination CSS (break-inside: avoid, heading break-after: avoid, @page).", "priority": "med" },
+    { "text": "Review mode: Suggesting-mode ProseMirror plugin writing standard ins/del markup, comments as mark+title+JSON island, Review toolbar with accept/reject.", "priority": "med" }
   ],
   "open_questions": [
     "Distribution: direct download with Developer ID signing, or personal use only for now?",
@@ -44,10 +44,13 @@
   "decisions": [
     { "date": "2026-07-07", "text": "Native Swift/AppKit shell + WKWebView (system HTML engine, not Electron) hosting a ProseMirror editing core. The document IS HTML, so true WYSIWYG means rendering with a real HTML engine. Also sets up a future iOS app reusing the same core." },
     { "date": "2026-07-07", "text": "Document-based app (each file its own window, like Word/Typora), not a workspace/sidebar app. Sidebar can come later." },
-    { "date": "2026-07-07", "text": "Core product promise: lossless round-trip. Never rewrite what the user didn't edit; unknown markup survives as protected islands." }
+    { "date": "2026-07-07", "text": "Core product promise: lossless round-trip. Never rewrite what the user didn't edit; unknown markup survives as protected islands." },
+    { "date": "2026-07-07", "text": "Untitled windows opt out of macOS state restoration until saved — template-bearing untitled docs were being preserved as drafts and resurrected on every launch." },
+    { "date": "2026-07-07", "text": "Tracked changes will use standard HTML ins/del elements and comments will use mark + title + a JSON island — review data stays readable in any browser, no sidecar files." }
   ],
   "links": [
     { "label": "README", "href": "README.md" },
+    { "label": "Roadmap & feature design", "href": "docs/ROADMAP.html" },
     { "label": "Demo memo (test doc)", "href": "samples/demo-memo.html" },
     { "label": "Editing core", "href": "editor/src/editor.js" }
   ]

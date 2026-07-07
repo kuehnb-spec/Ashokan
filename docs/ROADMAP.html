@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ashokan Roadmap &amp; Feature Design</title>
+<style>
+  body { font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         color: #1c1e21; max-width: 47em; margin: 0 auto; padding: 48px 56px 120px; }
+  h1 { font-size: 2em; letter-spacing: -0.02em; border-bottom: 2px solid #2a6f4e; padding-bottom: 0.3em; }
+  h2 { font-size: 1.4em; margin-top: 1.8em; color: #2a6f4e; }
+  h3 { font-size: 1.1em; margin-top: 1.4em; }
+  .meta { color: #667085; font-size: 0.9em; }
+  blockquote { border-left: 3px solid #2a6f4e; margin: 1em 0; padding: 0.2em 1.2em; color: #475467; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th { background: #eef6f1; text-align: left; }
+  th, td { border: 1px solid #d0d5dd; padding: 8px 14px; vertical-align: top; }
+  code { font: 0.88em ui-monospace, "SF Mono", Menlo, monospace; background: #f4f5f7;
+         border-radius: 4px; padding: 0.1em 0.4em; }
+  .principle { background: #eef6f1; border: 1px solid #bcd8c9; border-radius: 8px; padding: 12px 18px; }
+</style>
+</head>
+<body>
+<h1>Ashokan Roadmap &amp; Feature Design</h1>
+<p class="meta">Brainstormed July 7, 2026 · Brant Kuehn &amp; Claude. A living document — edit it in Ashokan.</p>
+
+<div class="principle">
+<p><strong>Guiding principle for every feature:</strong> the document must remain a plain, self-contained HTML file that renders correctly in any browser, with or without Ashokan. No sidecar files, no proprietary blobs, no lock-in — ever.</p>
+</div>
+
+<h2>1. Review mode — tracked changes &amp; comments</h2>
+<p>The crown jewel, and the feature no other editor can offer in an open format. The trick: <strong>HTML already has semantic elements for tracked changes.</strong> <code>&lt;ins&gt;</code> and <code>&lt;del&gt;</code> are standard HTML — every browser renders insertions underlined and deletions struck through. So a document with pending edits is still just an HTML file, reviewable in Chrome by someone who has never heard of Ashokan.</p>
+<ul>
+<li><strong>Suggesting mode:</strong> a ProseMirror plugin intercepts every edit and rewrites it as <code>&lt;ins data-author data-ts&gt;</code> / <code>&lt;del&gt;</code> markup instead of applying it directly.</li>
+<li><strong>Comments:</strong> the commented range is wrapped in <code>&lt;mark data-comment-id&gt;</code> with the comment text mirrored into its <code>title</code> attribute — so even in a plain browser, hovering shows the comment. Threads/authors/timestamps live in a small JSON island at the end of the body.</li>
+<li><strong>Review toolbar:</strong> Editing / Suggesting / Viewing mode switch, previous/next change, Accept, Reject, comment sidebar on the right (Word-style).</li>
+<li><strong>The killer workflow:</strong> Claude Code or Codex proposes edits to a memo as <code>ins</code>/<code>del</code> markup; Brant opens it in Ashokan and accepts or rejects each change with a click. Human-in-the-loop document collaboration with AI agents, in an open format.</li>
+</ul>
+
+<h2>2. Images &amp; tables — full word-processor competence</h2>
+<h3>Images</h3>
+<ul>
+<li>Insert via toolbar/menu, drag-and-drop from Finder, or paste from clipboard.</li>
+<li><strong>Default: embed as data URI</strong> — keeps the document one self-contained file (the whole point of HTML docs). Option per-image to store alongside the file instead; warn on very large embeds.</li>
+<li>Click to select: drag-handles for resize, alignment controls (inline / float left / float right / centered block), and a caption button that wraps in <code>&lt;figure&gt;/&lt;figcaption&gt;</code>.</li>
+</ul>
+<h3>Tables</h3>
+<ul>
+<li>Insert via a Word-style grid picker in the toolbar.</li>
+<li>Row/column add &amp; delete, merge/split cells, header-row toggle — <code>prosemirror-tables</code> supports all of it; we just expose commands.</li>
+<li>Draggable column widths (the <code>columnResizing</code> plugin, CSS already stubbed in).</li>
+<li>Fidelity: preserve <code>&lt;colgroup&gt;</code> and <code>&lt;caption&gt;</code> (currently dropped inside tables).</li>
+</ul>
+
+<h2>3. PDF export — print-quality pagination</h2>
+<p>WebKit already knows how to print HTML; the craft is in the pagination stylesheet Ashokan injects at export time:</p>
+<ul>
+<li><code>break-inside: avoid</code> on images, figures, tables, and code blocks — nothing splits across a page.</li>
+<li><code>break-after: avoid</code> on headings — no orphaned headings at page bottoms.</li>
+<li><code>orphans</code>/<code>widows</code> control for paragraphs; <code>@page</code> for paper size and margins.</li>
+<li>Native print pipeline (<code>NSPrintOperation</code>) for headers, footers, and page numbers.</li>
+<li>Export sheet: paper size, margins, page numbers on/off, then straight to a PDF that looks like it came from a word processor.</li>
+</ul>
+
+<h2>4. Recent files &amp; launcher</h2>
+<p>Open Ashokan → a welcome window (when no document is open): a grid of recently edited files, each card showing a <strong>live-rendered thumbnail</strong> of the document, the filename, and beneath it the dimmed file path and last-opened date. Click to open. Thumbnails are WKWebView snapshots cached by path + modification time, so the grid is instant.</p>
+<ul>
+<li>File &gt; Open Recent already works (wired this session).</li>
+<li>Later: a QuickLook thumbnail extension so HTML documents get real previews in Finder and Spotlight too.</li>
+</ul>
+
+<h2>5. iOS / iPadOS companion</h2>
+<p>The architecture bet already paid for this: the ProseMirror editing core doesn't know it's on a Mac — it runs in any WKWebView. The iOS app is a SwiftUI <code>DocumentGroup</code> shell around the same JS bundle.</p>
+<ul>
+<li><strong>Sync = files, not a service.</strong> Keep documents in iCloud Drive; the Files integration ("open in place") lets both apps edit the same file with no sync protocol, no server, no account.</li>
+<li>Phone/iPad get view + edit + save, local or iCloud; the Mac stays the power tool.</li>
+</ul>
+
+<h2>Recommended build order</h2>
+<table>
+<thead>
+<tr><th>Order</th><th>Feature</th><th>Why this order</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Images &amp; tables</td><td>Word-processor table stakes; unlocks real daily use</td></tr>
+<tr><td>2</td><td>Recents launcher</td><td>Small effort, big daily delight; makes the app feel finished</td></tr>
+<tr><td>3</td><td>PDF export</td><td>High value for memos; contained scope</td></tr>
+<tr><td>4</td><td>Review mode</td><td>The differentiator — worth doing on a settled foundation</td></tr>
+<tr><td>5</td><td>iOS companion</td><td>After the core earns its keep on the Mac</td></tr>
+</tbody>
+</table>
+
+<blockquote>
+<p>Also on the someday list: find &amp; replace across both panes, source-pane syntax highlighting, document outline sidebar, columns/layout helpers, and a Developer ID–signed release build.</p>
+</blockquote>
+</body>
+</html>
