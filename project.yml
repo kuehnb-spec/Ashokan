@@ -37,6 +37,15 @@ targets:
             LSItemContentTypes:
               - public.html
             NSDocumentClass: Ashokan.Document
+          - CFBundleTypeName: Markdown Document
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - net.daringfireball.markdown
+            CFBundleTypeExtensions:
+              - md
+              - markdown
+            NSDocumentClass: Ashokan.Document
 
 schemes:
   Ashokan:

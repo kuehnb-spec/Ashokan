@@ -72,11 +72,48 @@ final class Harness: NSObject, WKScriptMessageHandler {
                 withJSONObject: ["bodyHTML": inputBody, "headHTML": "", "bodyAttrs": [:], "hasOwnStyles": true]
             )
             let json = String(data: payload, encoding: .utf8)!
-            webView.evaluateJavaScript("window.Ashokan.loadDocument(\(json)); window.Ashokan.getBodyHTML();") { result, error in
+            webView.evaluateJavaScript("window.Ashokan.loadDocument(\(json)); window.Ashokan.getBodyHTML();") { [weak self] result, error in
                 if let error { fail("evaluate error: \(error)") }
                 guard let output = result as? String else { fail("no output"); return }
-                report(output)
+                let htmlFailures = report(output)
+                self?.runMarkdownPhase(htmlFailures: htmlFailures)
             }
+        }
+    }
+
+    func runMarkdownPhase(htmlFailures: Int) {
+        let markdown = "# Title\n\nSome **bold** and *italic* text with `code`.\n\n- first\n- second\n\n> a quote\n"
+        let payload = try! JSONSerialization.data(
+            withJSONObject: ["markdown": markdown, "isMarkdown": true]
+        )
+        let json = String(data: payload, encoding: .utf8)!
+        webView.evaluateJavaScript(
+            "window.Ashokan.loadDocument(\(json)); JSON.stringify({html: window.Ashokan.getBodyHTML(), md: window.Ashokan.getMarkdown()});"
+        ) { result, error in
+            if let error { fail("markdown evaluate error: \(error)") }
+            guard let raw = result as? String,
+                  let data = raw.data(using: .utf8),
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
+                  let html = dict["html"], let md = dict["md"]
+            else { fail("no markdown output"); return }
+
+            var failures = htmlFailures
+            let mdChecks: [(String, Bool)] = [
+                ("markdown renders to h1", html.contains("<h1>Title</h1>")),
+                ("markdown bold/italic/code render", html.contains("<strong>bold</strong>") && html.contains("<em>italic</em>") && html.contains("<code>code</code>")),
+                ("markdown list renders", html.contains("<li>first</li>")),
+                ("markdown round-trips heading", md.contains("# Title")),
+                ("markdown round-trips list", md.contains("- first") || md.contains("-   first") || md.contains("*   first")),
+                ("markdown round-trips bold", md.contains("**bold**")),
+                ("markdown round-trips quote", md.contains("> a quote")),
+            ]
+            print("--- markdown phase ---")
+            for (name, ok) in mdChecks {
+                print("\(ok ? "PASS" : "FAIL")  \(name)")
+                if !ok { failures += 1 }
+            }
+            if failures > 0 { print("round-tripped markdown:\n\(md)") }
+            exit(failures == 0 ? 0 : 1)
         }
     }
 }
@@ -86,7 +123,7 @@ func fail(_ msg: String) {
     exit(1)
 }
 
-func report(_ output: String) {
+func report(_ output: String) -> Int {
     print("--- round-tripped body ---")
     print(output)
     print("--------------------------")
@@ -96,7 +133,7 @@ func report(_ output: String) {
         print("\(ok ? "PASS" : "FAIL")  \(name)")
         if !ok { failures += 1 }
     }
-    exit(failures == 0 ? 0 : 1)
+    return failures
 }
 
 let harness = Harness()

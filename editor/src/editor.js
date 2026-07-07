@@ -20,6 +20,9 @@ import { wrapInList, splitListItem, liftListItem, sinkListItem } from "prosemirr
 import { inputRules, wrappingInputRule, textblockTypeInputRule } from "prosemirror-inputrules"
 import { dropCursor } from "prosemirror-dropcursor"
 import { gapCursor } from "prosemirror-gapcursor"
+import { marked } from "marked"
+import TurndownService from "turndown"
+import { gfm } from "turndown-plugin-gfm"
 import {
   tableNodes, tableEditing, goToNextCell, columnResizing,
   addColumnBefore, addColumnAfter, deleteColumn,
@@ -494,6 +497,16 @@ function buildInputRules() {
 
 let view = null
 let loading = false
+let isMarkdownDoc = false
+
+const turndown = new TurndownService({
+  headingStyle: "atx",
+  codeBlockStyle: "fenced",
+  emDelimiter: "*",
+})
+turndown.use(gfm)
+// Keep constructs Markdown can't express as inline HTML (valid in Markdown).
+turndown.keep(["figure", "figcaption", "details", "summary", "ins", "mark", "u", "sub", "sup", "kbd"])
 
 function post(type, payload) {
   try {
@@ -501,9 +514,18 @@ function post(type, payload) {
   } catch (e) { /* not running inside the app shell */ }
 }
 
+function wordCount(doc) {
+  const text = doc.textBetween(0, doc.content.size, " ", " ")
+  const words = text.trim().split(/\s+/).filter(Boolean)
+  return words.length
+}
+
 function notifyChange(state) {
   if (loading) return
-  post("docChanged", { bodyHTML: serializeBodyHTML(state.doc) })
+  const bodyHTML = serializeBodyHTML(state.doc)
+  const payload = { bodyHTML, words: wordCount(state.doc) }
+  if (isMarkdownDoc) payload.markdown = turndown.turndown(bodyHTML)
+  post("docChanged", payload)
 }
 
 function editorKeymap() {
@@ -617,21 +639,31 @@ function run(command) {
 }
 
 window.Ashokan = {
-  // payload: { bodyHTML, headHTML, bodyAttrs: {..}, hasOwnStyles: bool }
+  // payload: { bodyHTML | markdown, headHTML, bodyAttrs: {..},
+  //            hasOwnStyles: bool, isMarkdown: bool }
   loadDocument(payload) {
     loading = true
     try {
+      isMarkdownDoc = !!payload.isMarkdown
+      const bodyHTML = isMarkdownDoc
+        ? marked.parse(payload.markdown || "", { gfm: true })
+        : (payload.bodyHTML || "")
       applyHeadHTML(payload.headHTML || "")
       applyBodyAttrs(payload.bodyAttrs || {})
-      document.body.classList.toggle("ashokan-default-theme", !payload.hasOwnStyles)
-      mount(parseBodyHTML(payload.bodyHTML || ""))
+      document.body.classList.toggle("ashokan-default-theme", isMarkdownDoc || !payload.hasOwnStyles)
+      mount(parseBodyHTML(bodyHTML))
     } finally {
       loading = false
     }
+    if (view) post("stats", { words: wordCount(view.state.doc) })
   },
 
   getBodyHTML() {
     return view ? serializeBodyHTML(view.state.doc) : ""
+  },
+
+  getMarkdown() {
+    return view ? turndown.turndown(serializeBodyHTML(view.state.doc)) : ""
   },
 
   bold() { run(toggleMark(schema.marks.strong)) },

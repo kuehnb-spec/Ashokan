@@ -7,6 +7,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     private let splitVC = NSSplitViewController()
     private var sourceItem: NSSplitViewItem!
     private var stylePopup: NSPopUpButton!
+    private var statusPathLabel: NSTextField!
+    private var statusInfoLabel: NSTextField!
+    private var lastWordCount = 0
 
     private var doc: Document { document as! Document }
 
@@ -34,17 +37,46 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
 
         splitVC.addSplitViewItem(editorItem)
         splitVC.addSplitViewItem(sourceItem)
-        window.contentViewController = splitVC
+
+        // Content = split view over a thin status bar.
+        let rootVC = NSViewController()
+        rootVC.view = NSView()
+        rootVC.addChild(splitVC)
+        let statusBar = buildStatusBar()
+        splitVC.view.translatesAutoresizingMaskIntoConstraints = false
+        rootVC.view.addSubview(splitVC.view)
+        rootVC.view.addSubview(statusBar)
+        NSLayoutConstraint.activate([
+            splitVC.view.topAnchor.constraint(equalTo: rootVC.view.topAnchor),
+            splitVC.view.leadingAnchor.constraint(equalTo: rootVC.view.leadingAnchor),
+            splitVC.view.trailingAnchor.constraint(equalTo: rootVC.view.trailingAnchor),
+            statusBar.topAnchor.constraint(equalTo: splitVC.view.bottomAnchor),
+            statusBar.leadingAnchor.constraint(equalTo: rootVC.view.leadingAnchor),
+            statusBar.trailingAnchor.constraint(equalTo: rootVC.view.trailingAnchor),
+            statusBar.bottomAnchor.constraint(equalTo: rootVC.view.bottomAnchor),
+            statusBar.heightAnchor.constraint(equalToConstant: 24),
+        ])
+        window.contentViewController = rootVC
         // Setting contentViewController resizes the window to the content's
         // fitting size — which is ~zero for an unconstrained split view.
         window.setContentSize(NSSize(width: 1080, height: 780))
         window.center()
 
+        // Multiple documents open as native window tabs.
+        window.tabbingMode = .preferred
+        window.tabbingIdentifier = "AshokanDocument"
+
+        // Top tier: file-level commands. Formatting lives in the bar below.
         let toolbar = NSToolbar(identifier: "AshokanToolbar")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
+
+        let formatAccessory = NSTitlebarAccessoryViewController()
+        formatAccessory.layoutAttribute = .bottom
+        formatAccessory.view = buildFormatBar()
+        window.addTitlebarAccessoryViewController(formatAccessory)
 
         wireUp()
     }
@@ -61,19 +93,45 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     }
 
     private func wireUp() {
-        editorVC.onBodyChanged = { [weak self] bodyHTML in
+        editorVC.onDocChanged = { [weak self] bodyHTML, markdown, words in
             guard let self else { return }
-            self.doc.model.bodyHTML = bodyHTML
-            self.doc.updateChangeCount(.changeDone)
-            if !self.sourceItem.isCollapsed && !self.sourceVC.isEditing {
-                self.sourceVC.setText(self.doc.model.assembled())
+            if self.doc.format == .markdown {
+                self.doc.markdown = markdown ?? self.doc.markdown
+            } else {
+                self.doc.model.bodyHTML = bodyHTML
             }
+            self.doc.updateChangeCount(.changeDone)
+            self.lastWordCount = words
+            self.updateStatusBar()
+            if !self.sourceItem.isCollapsed && !self.sourceVC.isEditing {
+                self.sourceVC.setText(self.sourceText())
+            }
+        }
+        editorVC.onStats = { [weak self] words in
+            self?.lastWordCount = words
+            self?.updateStatusBar()
         }
         sourceVC.onTextChanged = { [weak self] text in
             guard let self else { return }
-            self.doc.model = HTMLDocumentModel.parse(text)
+            if self.doc.format == .markdown {
+                self.doc.markdown = text
+            } else {
+                self.doc.model = HTMLDocumentModel.parse(text)
+            }
             self.doc.updateChangeCount(.changeDone)
-            self.editorVC.loadDocument(self.doc.model)
+            self.pushDocumentToEditor()
+        }
+    }
+
+    private func sourceText() -> String {
+        doc.format == .markdown ? doc.markdown : doc.model.assembled()
+    }
+
+    private func pushDocumentToEditor() {
+        if doc.format == .markdown {
+            editorVC.loadMarkdownDocument(doc.markdown)
+        } else {
+            editorVC.loadDocument(doc.model)
         }
     }
 
@@ -82,15 +140,87 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         // "Untitled" doesn't get preserved as a draft and resurrected forever.
         window?.isRestorable = doc.fileURL != nil
         editorVC.loadShell(baseURL: doc.fileURL?.deletingLastPathComponent())
-        editorVC.loadDocument(doc.model)
+        pushDocumentToEditor()
+        updateStatusBar()
     }
 
     /// Called when the document re-reads its file (e.g. Revert to Saved).
     func documentDidReload() {
-        editorVC.loadDocument(doc.model)
+        pushDocumentToEditor()
         if !sourceItem.isCollapsed {
-            sourceVC.setText(doc.model.assembled())
+            sourceVC.setText(sourceText())
         }
+        updateStatusBar()
+    }
+
+    // MARK: - Status bar
+
+    private func buildStatusBar() -> NSView {
+        let bar = NSBox()
+        bar.boxType = .custom
+        bar.borderWidth = 0
+        bar.fillColor = .windowBackgroundColor
+        bar.translatesAutoresizingMaskIntoConstraints = false
+
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+
+        statusPathLabel = NSTextField(labelWithString: "")
+        statusPathLabel.font = .systemFont(ofSize: 11)
+        statusPathLabel.textColor = .secondaryLabelColor
+        statusPathLabel.lineBreakMode = .byTruncatingMiddle
+        statusPathLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusPathLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        statusInfoLabel = NSTextField(labelWithString: "")
+        statusInfoLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        statusInfoLabel.textColor = .secondaryLabelColor
+        statusInfoLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        bar.contentView?.addSubview(separator)
+        bar.contentView?.addSubview(statusPathLabel)
+        bar.contentView?.addSubview(statusInfoLabel)
+        let content = bar.contentView!
+        NSLayoutConstraint.activate([
+            separator.topAnchor.constraint(equalTo: content.topAnchor),
+            separator.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            statusPathLabel.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 10),
+            statusPathLabel.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+            statusInfoLabel.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -10),
+            statusInfoLabel.centerYAnchor.constraint(equalTo: content.centerYAnchor),
+            statusPathLabel.trailingAnchor.constraint(lessThanOrEqualTo: statusInfoLabel.leadingAnchor, constant: -16),
+        ])
+        return bar
+    }
+
+    private func updateStatusBar() {
+        guard statusPathLabel != nil else { return }
+        if let url = doc.fileURL {
+            statusPathLabel.stringValue = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+            statusPathLabel.toolTip = url.path
+        } else {
+            statusPathLabel.stringValue = "Not saved yet"
+            statusPathLabel.toolTip = nil
+        }
+
+        var parts: [String] = []
+        parts.append(doc.format == .markdown ? "Markdown" : "HTML")
+        if let url = doc.fileURL,
+           let attrs = try? FileManager.default.attributesOfItem(atPath: url.path) {
+            if let size = attrs[.size] as? Int {
+                parts.append(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+            }
+            if let modified = attrs[.modificationDate] as? Date {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                parts.append("Saved \(formatter.string(from: modified))")
+            }
+        }
+        parts.append("\(lastWordCount) word\(lastWordCount == 1 ? "" : "s")")
+        statusInfoLabel.stringValue = parts.joined(separator: "  ·  ")
     }
 
     // MARK: - Format actions (reached from menus and toolbar via responder chain)
@@ -262,32 +392,94 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
 
     @objc func toggleSourcePane(_ sender: Any?) {
         if sourceItem.isCollapsed {
-            sourceVC.setText(doc.model.assembled())
+            sourceVC.setText(sourceText())
         }
         sourceItem.animator().isCollapsed.toggle()
     }
 
+    // MARK: - Format bar (second tier, below the toolbar)
+
+    private func buildFormatBar() -> NSView {
+        let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+        popup.addItems(withTitles: ["Title", "Heading", "Subheading", "Body", "Code Block"])
+        popup.selectItem(at: 3)
+        popup.target = self
+        popup.action = #selector(styleChanged(_:))
+        popup.controlSize = .small
+        popup.font = .systemFont(ofSize: 11)
+        stylePopup = popup
+
+        let tablePopup = NSPopUpButton(frame: .zero, pullsDown: true)
+        let tableMenu = Self.tableMenu(target: self)
+        let iconItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        iconItem.image = NSImage(systemSymbolName: "tablecells", accessibilityDescription: "Table")
+        tableMenu.insertItem(iconItem, at: 0)
+        tablePopup.menu = tableMenu
+        tablePopup.isBordered = false
+        tablePopup.toolTip = "Insert or edit a table"
+
+        func fmtButton(_ symbol: String, _ tooltip: String, _ action: Selector) -> NSButton {
+            let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)!,
+                                  target: self, action: action)
+            button.isBordered = false
+            button.bezelStyle = .regularSquare
+            button.toolTip = tooltip
+            return button
+        }
+
+        func spacer(_ width: CGFloat) -> NSView {
+            let v = NSView()
+            v.widthAnchor.constraint(equalToConstant: width).isActive = true
+            return v
+        }
+
+        let stack = NSStackView(views: [
+            popup, spacer(6),
+            fmtButton("bold", "Bold", #selector(fmtBold(_:))),
+            fmtButton("italic", "Italic", #selector(fmtItalic(_:))),
+            fmtButton("underline", "Underline", #selector(fmtUnderline(_:))),
+            fmtButton("chevron.left.forwardslash.chevron.right", "Inline Code", #selector(fmtInlineCode(_:))),
+            fmtButton("link", "Add Link", #selector(fmtLink(_:))), spacer(6),
+            fmtButton("list.bullet", "Bulleted List", #selector(fmtBulletList(_:))),
+            fmtButton("list.number", "Numbered List", #selector(fmtOrderedList(_:))),
+            fmtButton("text.quote", "Blockquote", #selector(fmtBlockquote(_:))), spacer(6),
+            fmtButton("photo", "Insert Image", #selector(insertImage(_:))),
+            tablePopup,
+        ])
+        stack.orientation = .horizontal
+        stack.spacing = 8
+        stack.edgeInsets = NSEdgeInsets(top: 3, left: 12, bottom: 5, right: 12)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let bar = NSView()
+        bar.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
+            stack.topAnchor.constraint(equalTo: bar.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor),
+            bar.heightAnchor.constraint(equalToConstant: 30),
+            popup.widthAnchor.constraint(equalToConstant: 110),
+        ])
+        return bar
+    }
+
+    // MARK: - Zoom
+
+    @objc func zoomIn(_ sender: Any?) { editorVC.webView.pageZoom = min(3.0, editorVC.webView.pageZoom + 0.1) }
+    @objc func zoomOut(_ sender: Any?) { editorVC.webView.pageZoom = max(0.5, editorVC.webView.pageZoom - 0.1) }
+    @objc func zoomActual(_ sender: Any?) { editorVC.webView.pageZoom = 1.0 }
+
     // MARK: - Toolbar
 
     private enum ItemID {
-        static let style = NSToolbarItem.Identifier("ashokan.style")
-        static let bold = NSToolbarItem.Identifier("ashokan.bold")
-        static let italic = NSToolbarItem.Identifier("ashokan.italic")
-        static let code = NSToolbarItem.Identifier("ashokan.code")
-        static let link = NSToolbarItem.Identifier("ashokan.link")
-        static let bulletList = NSToolbarItem.Identifier("ashokan.bulletList")
-        static let orderedList = NSToolbarItem.Identifier("ashokan.orderedList")
-        static let blockquote = NSToolbarItem.Identifier("ashokan.blockquote")
-        static let image = NSToolbarItem.Identifier("ashokan.image")
-        static let table = NSToolbarItem.Identifier("ashokan.table")
+        static let save = NSToolbarItem.Identifier("ashokan.save")
+        static let exportPDF = NSToolbarItem.Identifier("ashokan.exportPDF")
+        static let recents = NSToolbarItem.Identifier("ashokan.recents")
         static let source = NSToolbarItem.Identifier("ashokan.source")
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [ItemID.style, .space,
-         ItemID.bold, ItemID.italic, ItemID.code, ItemID.link, .space,
-         ItemID.bulletList, ItemID.orderedList, ItemID.blockquote, .space,
-         ItemID.image, ItemID.table,
+        [ItemID.save, ItemID.exportPDF, ItemID.recents,
          .flexibleSpace, ItemID.source]
     }
 
@@ -301,40 +493,18 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         switch identifier {
-        case ItemID.style:
-            let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 130, height: 24), pullsDown: false)
-            popup.addItems(withTitles: ["Title", "Heading", "Subheading", "Body", "Code Block"])
-            popup.selectItem(at: 3)
-            popup.target = self
-            popup.action = #selector(styleChanged(_:))
-            stylePopup = popup
-            let item = NSToolbarItem(itemIdentifier: identifier)
-            item.view = popup
-            item.label = "Style"
+        case ItemID.save:
+            let item = button(identifier, symbol: "square.and.arrow.down", label: "Save",
+                              action: #selector(NSDocument.save(_:)))
+            item.target = nil   // responder chain → the document
             return item
-        case ItemID.bold:
-            return button(identifier, symbol: "bold", label: "Bold", action: #selector(fmtBold(_:)))
-        case ItemID.italic:
-            return button(identifier, symbol: "italic", label: "Italic", action: #selector(fmtItalic(_:)))
-        case ItemID.code:
-            return button(identifier, symbol: "chevron.left.forwardslash.chevron.right", label: "Code", action: #selector(fmtInlineCode(_:)))
-        case ItemID.link:
-            return button(identifier, symbol: "link", label: "Link", action: #selector(fmtLink(_:)))
-        case ItemID.bulletList:
-            return button(identifier, symbol: "list.bullet", label: "Bulleted List", action: #selector(fmtBulletList(_:)))
-        case ItemID.orderedList:
-            return button(identifier, symbol: "list.number", label: "Numbered List", action: #selector(fmtOrderedList(_:)))
-        case ItemID.blockquote:
-            return button(identifier, symbol: "text.quote", label: "Blockquote", action: #selector(fmtBlockquote(_:)))
-        case ItemID.image:
-            return button(identifier, symbol: "photo", label: "Insert Image", action: #selector(insertImage(_:)))
-        case ItemID.table:
-            let item = NSMenuToolbarItem(itemIdentifier: identifier)
-            item.image = NSImage(systemSymbolName: "tablecells", accessibilityDescription: "Table")
-            item.label = "Table"
-            item.toolTip = "Insert or edit a table"
-            item.showsIndicator = true
-            item.menu = Self.tableMenu(target: self)
+        case ItemID.exportPDF:
+            return button(identifier, symbol: "square.and.arrow.up", label: "Export as PDF",
+                          action: #selector(exportPDF(_:)))
+        case ItemID.recents:
+            let item = button(identifier, symbol: "clock", label: "Recent Documents",
+                              action: Selector(("showWelcome:")))
+            item.target = nil   // responder chain → the app delegate
             return item
         case ItemID.source:
             return button(identifier, symbol: "curlybraces", label: "Source", action: #selector(toggleSourcePane(_:)))

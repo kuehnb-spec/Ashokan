@@ -63,8 +63,16 @@ swift scripts/roundtrip-test.swift   # headless fidelity checks on the real edit
 
 ## Features
 
-- **Welcome launcher** — recent documents with live-rendered thumbnails,
-  filename, and path; click to open.
+- **Welcome launcher & workspace** — recent documents with live-rendered
+  thumbnails, filename, and path; add your project folders to the workspace
+  sidebar and browse every HTML/Markdown document in them.
+- **Markdown too** — open `.md` files, edit them WYSIWYG, flip to source to
+  see clean Markdown, and saves stay Markdown (marked + turndown under the
+  hood). HTML remains the native tongue.
+- **Two-tier chrome** — file commands up top (save, PDF export, recents,
+  source toggle), a slim formatting bar below, native window tabs for
+  multiple documents, and a thin status bar with the file's path, format,
+  size, save time, and live word count.
 - **Images** — insert from file (embedded as a data URI so the document stays
   one self-contained file), paste or drag from anywhere, drag-corner resize,
   inline/float/center alignment, editable `<figure>`/`<figcaption>`.

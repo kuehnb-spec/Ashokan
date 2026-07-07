@@ -1,7 +1,21 @@
 import Cocoa
 
+enum DocumentFormat {
+    case html
+    case markdown
+}
+
 final class Document: NSDocument {
     var model = HTMLDocumentModel.parse(HTMLDocumentModel.untitledTemplate)
+    var format: DocumentFormat = .html
+    /// Authoritative source text for Markdown documents.
+    var markdown = ""
+
+    private static func isMarkdown(typeName: String, url: URL?) -> Bool {
+        if typeName.lowercased().contains("markdown") { return true }
+        let ext = url?.pathExtension.lowercased()
+        return ext == "md" || ext == "markdown"
+    }
 
     private var documentWindowController: DocumentWindowController? {
         windowControllers.first as? DocumentWindowController
@@ -34,7 +48,8 @@ final class Document: NSDocument {
     }
 
     override func data(ofType typeName: String) throws -> Data {
-        guard let data = model.assembled().data(using: .utf8) else {
+        let text = format == .markdown ? markdown : model.assembled()
+        guard let data = text.data(using: .utf8) else {
             throw NSError(domain: NSCocoaErrorDomain, code: NSFileWriteInapplicableStringEncodingError)
         }
         return data
@@ -44,7 +59,13 @@ final class Document: NSDocument {
         let text = String(data: data, encoding: .utf8)
             ?? String(data: data, encoding: .isoLatin1)
             ?? ""
-        model = HTMLDocumentModel.parse(text)
+        if Self.isMarkdown(typeName: typeName, url: fileURL) {
+            format = .markdown
+            markdown = text
+        } else {
+            format = .html
+            model = HTMLDocumentModel.parse(text)
+        }
         documentWindowController?.documentDidReload()
     }
 }

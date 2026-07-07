@@ -29,13 +29,12 @@
   "updated": "2026-07-07",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
-  "summary": "v0.2: the commute build-out. Everything from the July 7 brainstorm except review mode and iOS is now shipped and verified: images (insert/paste/drag, data-URI embed, drag-resize, alignment, editable figcaption), full table editing (insert sizes, row/col/merge/header commands, draggable column widths), PDF export with print-quality pagination (⌥⌘P), and the Welcome launcher with live-rendered recent-file thumbnails + name + path (recents persist via our own store since sharedfilelistd ignores ad-hoc builds). build.sh now installs to /Applications. Round-trip fidelity test: 14/14.",
+  "summary": "v0.3 after Brant's first hands-on feedback (he's loving it): thin status bar (path · format · size · saved time · live word count), two-tier chrome (file commands in the toolbar, formatting in a slim bar below, native window tabs, View zoom), workspace folders in the Welcome sidebar (add folders, browse their HTML/MD files as thumbnail cards), and full Markdown support (open/edit WYSIWYG/save as Markdown via marked+turndown; source pane shows Markdown; correct UTI net.daringfireball.markdown). Fidelity test now 21/21 including Markdown round-trip. Icon brief with 5 concepts + ChatGPT prompts in docs/icon-brief.md.",
   "next": [
-    { "text": "Brant: launch from /Applications (Spotlight → Ashokan), play with images/tables/PDF export, report first impressions.", "priority": "high" },
+    { "text": "Brant: generate icon images from docs/icon-brief.md prompts, hand Claude the 1024px PNG to wire in.", "priority": "high" },
     { "text": "Review mode: Suggesting-mode ProseMirror plugin writing standard ins/del markup, comments as mark+title+JSON island, Review toolbar with accept/reject.", "priority": "high" },
-    { "text": "Preserve colgroup and table caption; emit real colgroup for column widths.", "priority": "med" },
-    { "text": "Find & replace across both panes; source-pane syntax highlighting.", "priority": "med" },
-    { "text": "PDF page numbers/headers; QuickLook thumbnail extension.", "priority": "med" }
+    { "text": "Ship prep: Developer ID signing + notarization, Release build, public repo (see icon-brief.md checklist).", "priority": "med" },
+    { "text": "Preserve colgroup and table caption; find & replace; source syntax highlighting; PDF page numbers; QuickLook extension.", "priority": "med" }
   ],
   "open_questions": [
     "Distribution: direct download with Developer ID signing, or personal use only for now?",

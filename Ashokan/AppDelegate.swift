@@ -152,6 +152,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let viewMenu = NSMenu(title: "View")
         viewMenu.addItem(withTitle: "Toggle Source", action: Selector(("toggleSourcePane:")), keyEquivalent: "/")
         viewMenu.addItem(.separator())
+        viewMenu.addItem(withTitle: "Zoom In", action: Selector(("zoomIn:")), keyEquivalent: "=")
+        viewMenu.addItem(withTitle: "Zoom Out", action: Selector(("zoomOut:")), keyEquivalent: "-")
+        viewMenu.addItem(withTitle: "Actual Size", action: Selector(("zoomActual:")), keyEquivalent: "0")
+        viewMenu.addItem(.separator())
         let fullScreen = viewMenu.addItem(withTitle: "Enter Full Screen",
                                           action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
         fullScreen.keyEquivalentModifierMask = [.command, .control]
@@ -168,6 +172,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                            action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Zoom",
                            action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        windowMenu.addItem(.separator())
+        windowMenu.addItem(withTitle: "Show Previous Tab",
+                           action: #selector(NSWindow.selectPreviousTab(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "Show Next Tab",
+                           action: #selector(NSWindow.selectNextTab(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "Move Tab to New Window",
+                           action: #selector(NSWindow.moveTabToNewWindow(_:)), keyEquivalent: "")
+        windowMenu.addItem(withTitle: "Merge All Windows",
+                           action: #selector(NSWindow.mergeAllWindows(_:)), keyEquivalent: "")
         windowMenu.addItem(.separator())
         windowMenu.addItem(withTitle: "Bring All to Front",
                            action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")

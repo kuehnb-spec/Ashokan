@@ -119,11 +119,11 @@ var AshokanBundle = (() => {
   var dist_default = OrderedMap;
 
   // node_modules/prosemirror-model/dist/index.js
-  function findDiffStart(a, b, pos) {
+  function findDiffStart(a, b2, pos) {
     for (let i = 0; ; i++) {
-      if (i == a.childCount || i == b.childCount)
-        return a.childCount == b.childCount ? null : pos;
-      let childA = a.child(i), childB = b.child(i);
+      if (i == a.childCount || i == b2.childCount)
+        return a.childCount == b2.childCount ? null : pos;
+      let childA = a.child(i), childB = b2.child(i);
       if (childA == childB) {
         pos += childA.nodeSize;
         continue;
@@ -131,10 +131,10 @@ var AshokanBundle = (() => {
       if (!childA.sameMarkup(childB))
         return pos;
       if (childA.isText && childA.text != childB.text) {
-        let tA = childA.text, tB = childB.text, j = 0;
-        for (; tA[j] == tB[j]; j++)
+        let tA = childA.text, tB = childB.text, j2 = 0;
+        for (; tA[j2] == tB[j2]; j2++)
           pos++;
-        if (j && j < tA.length && j < tB.length && surrogateHigh(tA.charCodeAt(j - 1)) && surrogateLow(tA.charCodeAt(j)))
+        if (j2 && j2 < tA.length && j2 < tB.length && surrogateHigh(tA.charCodeAt(j2 - 1)) && surrogateLow(tA.charCodeAt(j2)))
           pos--;
         return pos;
       }
@@ -146,11 +146,11 @@ var AshokanBundle = (() => {
       pos += childA.nodeSize;
     }
   }
-  function findDiffEnd(a, b, posA, posB) {
-    for (let iA = a.childCount, iB = b.childCount; ; ) {
+  function findDiffEnd(a, b2, posA, posB) {
+    for (let iA = a.childCount, iB = b2.childCount; ; ) {
       if (iA == 0 || iB == 0)
         return iA == iB ? null : { a: posA, b: posB };
-      let childA = a.child(--iA), childB = b.child(--iB), size = childA.nodeSize;
+      let childA = a.child(--iA), childB = b2.child(--iB), size = childA.nodeSize;
       if (childA == childB) {
         posA -= size;
         posB -= size;
@@ -486,25 +486,25 @@ var AshokanBundle = (() => {
     found.offset = offset;
     return found;
   }
-  function compareDeep(a, b) {
-    if (a === b)
+  function compareDeep(a, b2) {
+    if (a === b2)
       return true;
-    if (!(a && typeof a == "object") || !(b && typeof b == "object"))
+    if (!(a && typeof a == "object") || !(b2 && typeof b2 == "object"))
       return false;
     let array = Array.isArray(a);
-    if (Array.isArray(b) != array)
+    if (Array.isArray(b2) != array)
       return false;
     if (array) {
-      if (a.length != b.length)
+      if (a.length != b2.length)
         return false;
       for (let i = 0; i < a.length; i++)
-        if (!compareDeep(a[i], b[i]))
+        if (!compareDeep(a[i], b2[i]))
           return false;
     } else {
       for (let p in a)
-        if (!(p in b) || !compareDeep(a[p], b[p]))
+        if (!(p in b2) || !compareDeep(a[p], b2[p]))
           return false;
-      for (let p in b)
+      for (let p in b2)
         if (!(p in a))
           return false;
     }
@@ -584,7 +584,7 @@ var AshokanBundle = (() => {
     */
     toJSON() {
       let obj = { type: this.type.name };
-      for (let _ in this.attrs) {
+      for (let _2 in this.attrs) {
         obj.attrs = this.attrs;
         break;
       }
@@ -606,13 +606,13 @@ var AshokanBundle = (() => {
     /**
     Test whether two sets of marks are identical.
     */
-    static sameSet(a, b) {
-      if (a == b)
+    static sameSet(a, b2) {
+      if (a == b2)
         return true;
-      if (a.length != b.length)
+      if (a.length != b2.length)
         return false;
       for (let i = 0; i < a.length; i++)
-        if (!a[i].eq(b[i]))
+        if (!a[i].eq(b2[i]))
           return false;
       return true;
     }
@@ -626,7 +626,7 @@ var AshokanBundle = (() => {
       if (marks2 instanceof _Mark)
         return [marks2];
       let copy2 = marks2.slice();
-      copy2.sort((a, b) => a.type.rank - b.type.rank);
+      copy2.sort((a, b2) => a.type.rank - b2.type.rank);
       return copy2;
     }
   };
@@ -1013,9 +1013,9 @@ var AshokanBundle = (() => {
       let after = this.parent.maybeChild(this.index());
       if (!after || !after.isInline)
         return null;
-      let marks2 = after.marks, next = $end.parent.maybeChild($end.index());
+      let marks2 = after.marks, next2 = $end.parent.maybeChild($end.index());
       for (var i = 0; i < marks2.length; i++)
-        if (marks2[i].type.spec.inclusive === false && (!next || !marks2[i].isInSet(next.marks)))
+        if (marks2[i].type.spec.inclusive === false && (!next2 || !marks2[i].isInSet(next2.marks)))
           marks2 = marks2[i--].removeFromSet(marks2);
       return marks2;
     }
@@ -1041,9 +1041,9 @@ var AshokanBundle = (() => {
     blockRange(other = this, pred) {
       if (other.pos < this.pos)
         return other.blockRange(this);
-      for (let d = this.depth - (this.parent.inlineContent || this.pos == other.pos ? 1 : 0); d >= 0; d--)
-        if (other.pos <= this.end(d) && (!pred || pred(this.node(d))))
-          return new NodeRange(this, other, d);
+      for (let d2 = this.depth - (this.parent.inlineContent || this.pos == other.pos ? 1 : 0); d2 >= 0; d2--)
+        if (other.pos <= this.end(d2) && (!pred || pred(this.node(d2))))
+          return new NodeRange(this, other, d2);
       return null;
     }
     /**
@@ -1526,7 +1526,7 @@ var AshokanBundle = (() => {
         copy2 = mark.addToSet(copy2);
       }
       if (!Mark.sameSet(copy2, this.marks))
-        throw new RangeError(`Invalid collection of marks for node ${this.type.name}: ${this.marks.map((m) => m.type.name)}`);
+        throw new RangeError(`Invalid collection of marks for node ${this.type.name}: ${this.marks.map((m2) => m2.type.name)}`);
       this.content.forEach((node) => node.check());
     }
     /**
@@ -1534,7 +1534,7 @@ var AshokanBundle = (() => {
     */
     toJSON() {
       let obj = { type: this.type.name };
-      for (let _ in this.attrs) {
+      for (let _2 in this.attrs) {
         obj.attrs = this.attrs;
         break;
       }
@@ -1685,8 +1685,8 @@ var AshokanBundle = (() => {
     */
     compatible(other) {
       for (let i = 0; i < this.next.length; i++)
-        for (let j = 0; j < other.next.length; j++)
-          if (this.next[i].type == other.next[j].type)
+        for (let j2 = 0; j2 < other.next.length; j2++)
+          if (this.next[i].type == other.next[j2].type)
             return true;
       return false;
     }
@@ -1705,10 +1705,10 @@ var AshokanBundle = (() => {
         if (finished && (!toEnd || finished.validEnd))
           return Fragment.from(types.map((tp) => tp.createAndFill()));
         for (let i = 0; i < match.next.length; i++) {
-          let { type, next } = match.next[i];
-          if (!(type.isText || type.hasRequiredAttrs()) && seen.indexOf(next) == -1) {
-            seen.push(next);
-            let found2 = search(next, types.concat(type));
+          let { type, next: next2 } = match.next[i];
+          if (!(type.isText || type.hasRequiredAttrs()) && seen.indexOf(next2) == -1) {
+            seen.push(next2);
+            let found2 = search(next2, types.concat(type));
             if (found2)
               return found2;
           }
@@ -1745,8 +1745,8 @@ var AshokanBundle = (() => {
           return result.reverse();
         }
         for (let i = 0; i < match.next.length; i++) {
-          let { type, next } = match.next[i];
-          if (!type.isLeaf && !type.hasRequiredAttrs() && !(type.name in seen) && (!current.type || next.validEnd)) {
+          let { type, next: next2 } = match.next[i];
+          if (!type.isLeaf && !type.hasRequiredAttrs() && !(type.name in seen) && (!current.type || next2.validEnd)) {
             active.push({ match: type.contentMatch, type, via: current });
             seen[type.name] = true;
           }
@@ -1775,17 +1775,17 @@ var AshokanBundle = (() => {
     */
     toString() {
       let seen = [];
-      function scan(m) {
-        seen.push(m);
-        for (let i = 0; i < m.next.length; i++)
-          if (seen.indexOf(m.next[i].next) == -1)
-            scan(m.next[i].next);
+      function scan(m2) {
+        seen.push(m2);
+        for (let i = 0; i < m2.next.length; i++)
+          if (seen.indexOf(m2.next[i].next) == -1)
+            scan(m2.next[i].next);
       }
       scan(this);
-      return seen.map((m, i) => {
-        let out = i + (m.validEnd ? "*" : " ") + " ";
-        for (let i2 = 0; i2 < m.next.length; i2++)
-          out += (i2 ? ", " : "") + m.next[i2].type.name + "->" + seen.indexOf(m.next[i2].next);
+      return seen.map((m2, i) => {
+        let out = i + (m2.validEnd ? "*" : " ") + " ";
+        for (let i2 = 0; i2 < m2.next.length; i2++)
+          out += (i2 ? ", " : "") + m2.next[i2].type.name + "->" + seen.indexOf(m2.next[i2].next);
         return out;
       }).join("\n");
     }
@@ -1916,10 +1916,10 @@ var AshokanBundle = (() => {
         return expr2.exprs.reduce((out, expr3) => out.concat(compile(expr3, from2)), []);
       } else if (expr2.type == "seq") {
         for (let i = 0; ; i++) {
-          let next = compile(expr2.exprs[i], from2);
+          let next2 = compile(expr2.exprs[i], from2);
           if (i == expr2.exprs.length - 1)
-            return next;
-          connect(next, from2 = node());
+            return next2;
+          connect(next2, from2 = node());
         }
       } else if (expr2.type == "star") {
         let loop = node();
@@ -1936,18 +1936,18 @@ var AshokanBundle = (() => {
       } else if (expr2.type == "range") {
         let cur = from2;
         for (let i = 0; i < expr2.min; i++) {
-          let next = node();
-          connect(compile(expr2.expr, cur), next);
-          cur = next;
+          let next2 = node();
+          connect(compile(expr2.expr, cur), next2);
+          cur = next2;
         }
         if (expr2.max == -1) {
           connect(compile(expr2.expr, cur), cur);
         } else {
           for (let i = expr2.min; i < expr2.max; i++) {
-            let next = node();
-            edge(cur, next);
-            connect(compile(expr2.expr, cur), next);
-            cur = next;
+            let next2 = node();
+            edge(cur, next2);
+            connect(compile(expr2.expr, cur), next2);
+            cur = next2;
           }
         }
         return [edge(cur)];
@@ -1958,8 +1958,8 @@ var AshokanBundle = (() => {
       }
     }
   }
-  function cmp(a, b) {
-    return b - a;
+  function cmp(a, b2) {
+    return b2 - a;
   }
   function nullFrom(nfa2, node) {
     let result = [];
@@ -2009,13 +2009,13 @@ var AshokanBundle = (() => {
   function checkForDeadEnds(match, stream) {
     for (let i = 0, work = [match]; i < work.length; i++) {
       let state = work[i], dead = !state.validEnd, nodes2 = [];
-      for (let j = 0; j < state.next.length; j++) {
-        let { type, next } = state.next[j];
+      for (let j2 = 0; j2 < state.next.length; j2++) {
+        let { type, next: next2 } = state.next[j2];
         nodes2.push(type.name);
         if (dead && !(type.isText || type.hasRequiredAttrs()))
           dead = false;
-        if (work.indexOf(next) == -1)
-          work.push(next);
+        if (work.indexOf(next2) == -1)
+          work.push(next2);
       }
       if (dead)
         stream.err("Only non-generatable nodes (" + nodes2.join(", ") + ") in a required position (see https://prosemirror.net/docs/guide/#generatable)");
@@ -2262,7 +2262,7 @@ var AshokanBundle = (() => {
         throw new RangeError("Schema is missing its top node type ('" + topType + "')");
       if (!result.text)
         throw new RangeError("Every schema needs a 'text' type");
-      for (let _ in result.text.attrs)
+      for (let _2 in result.text.attrs)
         throw new RangeError("The text node type should not have attributes");
       return result;
     }
@@ -2458,13 +2458,13 @@ var AshokanBundle = (() => {
     Create a parser that targets the given schema, using the given
     parsing rules.
     */
-    constructor(schema2, rules) {
+    constructor(schema2, rules3) {
       this.schema = schema2;
-      this.rules = rules;
+      this.rules = rules3;
       this.tags = [];
       this.styles = [];
       let matchedStyles = this.matchedStyles = [];
-      rules.forEach((rule) => {
+      rules3.forEach((rule) => {
         if (isTagRule(rule)) {
           this.tags.push(rule);
         } else if (isStyleRule(rule)) {
@@ -2547,25 +2547,25 @@ var AshokanBundle = (() => {
       function insert(rule) {
         let priority = rule.priority == null ? 50 : rule.priority, i = 0;
         for (; i < result.length; i++) {
-          let next = result[i], nextPriority = next.priority == null ? 50 : next.priority;
+          let next2 = result[i], nextPriority = next2.priority == null ? 50 : next2.priority;
           if (nextPriority < priority)
             break;
         }
         result.splice(i, 0, rule);
       }
       for (let name in schema2.marks) {
-        let rules = schema2.marks[name].spec.parseDOM;
-        if (rules)
-          rules.forEach((rule) => {
+        let rules3 = schema2.marks[name].spec.parseDOM;
+        if (rules3)
+          rules3.forEach((rule) => {
             insert(rule = copy(rule));
             if (!(rule.mark || rule.ignore || rule.clearMark))
               rule.mark = name;
           });
       }
       for (let name in schema2.nodes) {
-        let rules = schema2.nodes[name].spec.parseDOM;
-        if (rules)
-          rules.forEach((rule) => {
+        let rules3 = schema2.nodes[name].spec.parseDOM;
+        if (rules3)
+          rules3.forEach((rule) => {
             insert(rule = copy(rule));
             if (!(rule.node || rule.ignore || rule.mark))
               rule.node = name;
@@ -2665,13 +2665,13 @@ var AshokanBundle = (() => {
     }
     finish(openEnd) {
       if (!(this.options & OPT_PRESERVE_WS)) {
-        let last = this.content[this.content.length - 1], m;
-        if (last && last.isText && (m = /[ \t\r\n\u000c]+$/.exec(last.text))) {
+        let last = this.content[this.content.length - 1], m2;
+        if (last && last.isText && (m2 = /[ \t\r\n\u000c]+$/.exec(last.text))) {
           let text = last;
-          if (last.text.length == m[0].length)
+          if (last.text.length == m2[0].length)
             this.content.pop();
           else
-            this.content[this.content.length - 1] = text.withText(text.text.slice(0, text.text.length - m[0].length));
+            this.content[this.content.length - 1] = text.withText(text.text.slice(0, text.text.length - m2[0].length));
         }
       }
       let content = Fragment.from(this.content);
@@ -2822,7 +2822,7 @@ var AshokanBundle = (() => {
               if (rule.ignore)
                 return null;
               if (rule.clearMark)
-                marks2 = marks2.filter((m) => !rule.clearMark(m));
+                marks2 = marks2.filter((m2) => !rule.clearMark(m2));
               else
                 marks2 = marks2.concat(this.parser.schema.marks[rule.mark].create(rule.attrs));
               if (rule.consuming === false)
@@ -2928,9 +2928,9 @@ var AshokanBundle = (() => {
         if (top.match)
           top.match = top.match.matchType(node.type);
         let nodeMarks = Mark.none;
-        for (let m of innerMarks.concat(node.marks))
-          if (top.type ? top.type.allowsMarkType(m.type) : markMayApply(m.type, node.type))
-            nodeMarks = m.addToSet(nodeMarks);
+        for (let m2 of innerMarks.concat(node.marks))
+          if (top.type ? top.type.allowsMarkType(m2.type) : markMayApply(m2.type, node.type))
+            nodeMarks = m2.addToSet(nodeMarks);
         top.content.push(node.mark(nodeMarks));
         return true;
       }
@@ -2953,9 +2953,9 @@ var AshokanBundle = (() => {
       if (top.options & OPT_OPEN_LEFT && top.content.length == 0)
         options |= OPT_OPEN_LEFT;
       let applyMarks = Mark.none;
-      marks2 = marks2.filter((m) => {
-        if (top.type ? top.type.allowsMarkType(m.type) : markMayApply(m.type, type)) {
-          applyMarks = m.addToSet(applyMarks);
+      marks2 = marks2.filter((m2) => {
+        if (top.type ? top.type.allowsMarkType(m2.type) : markMayApply(m2.type, type)) {
+          applyMarks = m2.addToSet(applyMarks);
           return false;
         }
         return true;
@@ -2995,8 +2995,8 @@ var AshokanBundle = (() => {
       let pos = 0;
       for (let i = this.open; i >= 0; i--) {
         let content = this.nodes[i].content;
-        for (let j = content.length - 1; j >= 0; j--)
-          pos += content[j].nodeSize;
+        for (let j2 = content.length - 1; j2 >= 0; j2--)
+          pos += content[j2].nodeSize;
         if (i)
           pos++;
       }
@@ -3052,8 +3052,8 @@ var AshokanBundle = (() => {
                 return true;
             return false;
           } else {
-            let next = depth > 0 || depth == 0 && useRoot ? this.nodes[depth].type : option && depth >= minDepth ? option.node(depth - minDepth).type : null;
-            if (!next || next.name != part && !next.isInGroup(part))
+            let next2 = depth > 0 || depth == 0 && useRoot ? this.nodes[depth].type : option && depth >= minDepth ? option.node(depth - minDepth).type : null;
+            if (!next2 || next2.name != part && !next2.isInGroup(part))
               return false;
             depth--;
           }
@@ -3065,8 +3065,8 @@ var AshokanBundle = (() => {
     textblockFromContext() {
       let $context = this.options.context;
       if ($context)
-        for (let d = $context.depth; d >= 0; d--) {
-          let deflt = $context.node(d).contentMatchAt($context.indexAfter(d)).defaultType;
+        for (let d2 = $context.depth; d2 >= 0; d2--) {
+          let deflt = $context.node(d2).contentMatchAt($context.indexAfter(d2)).defaultType;
           if (deflt && deflt.isTextblock && deflt.defaultAttrs)
             return deflt;
         }
@@ -3108,10 +3108,10 @@ var AshokanBundle = (() => {
       let seen = [], scan = (match) => {
         seen.push(match);
         for (let i = 0; i < match.edgeCount; i++) {
-          let { type, next } = match.edge(i);
+          let { type, next: next2 } = match.edge(i);
           if (type == nodeType)
             return true;
-          if (seen.indexOf(next) < 0 && scan(next))
+          if (seen.indexOf(next2) < 0 && scan(next2))
             return true;
         }
       };
@@ -3147,12 +3147,12 @@ var AshokanBundle = (() => {
         if (active.length || node.marks.length) {
           let keep = 0, rendered = 0;
           while (keep < active.length && rendered < node.marks.length) {
-            let next = node.marks[rendered];
-            if (!this.marks[next.type.name]) {
+            let next2 = node.marks[rendered];
+            if (!this.marks[next2.type.name]) {
               rendered++;
               continue;
             }
-            if (!next.eq(active[keep][0]) || next.type.spec.spanning === false)
+            if (!next2.eq(active[keep][0]) || next2.type.spec.spanning === false)
               break;
             keep++;
             rendered++;
@@ -3557,10 +3557,10 @@ var AshokanBundle = (() => {
     /**
     @internal
     */
-    setMirror(n, m) {
+    setMirror(n, m2) {
       if (!this.mirror)
         this.mirror = [];
-      this.mirror.push(n, m);
+      this.mirror.push(n, m2);
     }
     /**
     Append the inverse of the given mapping to this one.
@@ -4043,11 +4043,11 @@ var AshokanBundle = (() => {
       dist--;
     }
     if (dist > 0) {
-      let next = $from.node(depth).maybeChild($from.indexAfter(depth));
+      let next2 = $from.node(depth).maybeChild($from.indexAfter(depth));
       while (dist > 0) {
-        if (!next || next.isLeaf)
+        if (!next2 || next2.isLeaf)
           return true;
-        next = next.firstChild;
+        next2 = next2.firstChild;
         dist--;
       }
     }
@@ -4103,10 +4103,10 @@ var AshokanBundle = (() => {
         let end = Math.min(pos + node.nodeSize, to);
         for (let i = 0; i < toRemove.length; i++) {
           let style = toRemove[i], found2;
-          for (let j = 0; j < matched.length; j++) {
-            let m = matched[j];
-            if (m.step == step - 1 && style.eq(matched[j].style))
-              found2 = m;
+          for (let j2 = 0; j2 < matched.length; j2++) {
+            let m2 = matched[j2];
+            if (m2.step == step - 1 && style.eq(matched[j2].style))
+              found2 = m2;
           }
           if (found2) {
             found2.to = end;
@@ -4117,7 +4117,7 @@ var AshokanBundle = (() => {
         }
       }
     });
-    matched.forEach((m) => tr.step(new RemoveMarkStep(m.from, m.to, m.style)));
+    matched.forEach((m2) => tr.step(new RemoveMarkStep(m2.from, m2.to, m2.style)));
   }
   function clearIncompatible(tr, pos, parentType, match = parentType.contentMatch, clearNewlines = true) {
     let node = tr.doc.nodeAt(pos);
@@ -4129,15 +4129,15 @@ var AshokanBundle = (() => {
         replSteps.push(new ReplaceStep(cur, end, Slice.empty));
       } else {
         match = allowed;
-        for (let j = 0; j < child.marks.length; j++)
-          if (!parentType.allowsMarkType(child.marks[j].type))
-            tr.step(new RemoveMarkStep(cur, end, child.marks[j]));
+        for (let j2 = 0; j2 < child.marks.length; j2++)
+          if (!parentType.allowsMarkType(child.marks[j2].type))
+            tr.step(new RemoveMarkStep(cur, end, child.marks[j2]));
         if (clearNewlines && child.isText && parentType.whitespace != "pre") {
-          let m, newline = /\r?\n|\r/g, slice2;
-          while (m = newline.exec(child.text)) {
+          let m2, newline = /\r?\n|\r/g, slice2;
+          while (m2 = newline.exec(child.text)) {
             if (!slice2)
               slice2 = new Slice(Fragment.from(parentType.schema.text(" ", parentType.allowedMarks(child.marks))), 0, 0);
-            replSteps.push(new ReplaceStep(cur + m.index, cur + m.index + m[0].length, slice2));
+            replSteps.push(new ReplaceStep(cur + m2.index, cur + m2.index + m2[0].length, slice2));
           }
         }
       }
@@ -4175,19 +4175,19 @@ var AshokanBundle = (() => {
     let gapStart = $from.before(depth + 1), gapEnd = $to.after(depth + 1);
     let start = gapStart, end = gapEnd;
     let before = Fragment.empty, openStart = 0;
-    for (let d = depth, splitting = false; d > target; d--)
-      if (splitting || $from.index(d) > 0) {
+    for (let d2 = depth, splitting = false; d2 > target; d2--)
+      if (splitting || $from.index(d2) > 0) {
         splitting = true;
-        before = Fragment.from($from.node(d).copy(before));
+        before = Fragment.from($from.node(d2).copy(before));
         openStart++;
       } else {
         start--;
       }
     let after = Fragment.empty, openEnd = 0;
-    for (let d = depth, splitting = false; d > target; d--)
-      if (splitting || $to.after(d + 1) < $to.end(d)) {
+    for (let d2 = depth, splitting = false; d2 > target; d2--)
+      if (splitting || $to.after(d2 + 1) < $to.end(d2)) {
         splitting = true;
-        after = Fragment.from($to.node(d).copy(after));
+        after = Fragment.from($to.node(d2).copy(after));
         openEnd++;
       } else {
         end++;
@@ -4269,9 +4269,9 @@ var AshokanBundle = (() => {
   function replaceNewlines(tr, node, pos, mapFrom) {
     node.forEach((child, offset) => {
       if (child.isText) {
-        let m, newline = /\r?\n|\r/g;
-        while (m = newline.exec(child.text)) {
-          let start = tr.mapping.slice(mapFrom).map(pos + 1 + offset + m.index);
+        let m2, newline = /\r?\n|\r/g;
+        while (m2 = newline.exec(child.text)) {
+          let start = tr.mapping.slice(mapFrom).map(pos + 1 + offset + m2.index);
           tr.replaceWith(start, start + 1, node.type.schema.linebreakReplacement.create());
         }
       }
@@ -4307,8 +4307,8 @@ var AshokanBundle = (() => {
     let innerType = typesAfter && typesAfter[typesAfter.length - 1] || $pos.parent;
     if (base2 < 0 || $pos.parent.type.spec.isolating || !$pos.parent.canReplace($pos.index(), $pos.parent.childCount) || !innerType.type.validContent($pos.parent.content.cutByIndex($pos.index(), $pos.parent.childCount)))
       return false;
-    for (let d = $pos.depth - 1, i = depth - 2; d > base2; d--, i--) {
-      let node = $pos.node(d), index2 = $pos.index(d);
+    for (let d2 = $pos.depth - 1, i = depth - 2; d2 > base2; d2--, i--) {
+      let node = $pos.node(d2), index2 = $pos.index(d2);
       if (node.type.spec.isolating)
         return false;
       let rest = node.content.cutByIndex(index2, node.childCount);
@@ -4325,10 +4325,10 @@ var AshokanBundle = (() => {
   }
   function split(tr, pos, depth = 1, typesAfter) {
     let $pos = tr.doc.resolve(pos), before = Fragment.empty, after = Fragment.empty;
-    for (let d = $pos.depth, e = $pos.depth - depth, i = depth - 1; d > e; d--, i--) {
-      before = Fragment.from($pos.node(d).copy(before));
+    for (let d2 = $pos.depth, e = $pos.depth - depth, i = depth - 1; d2 > e; d2--, i--) {
+      before = Fragment.from($pos.node(d2).copy(before));
       let typeAfter = typesAfter && typesAfter[i];
-      after = Fragment.from(typeAfter ? typeAfter.type.create(typeAfter.attrs, after) : $pos.node(d).copy(after));
+      after = Fragment.from(typeAfter ? typeAfter.type.create(typeAfter.attrs, after) : $pos.node(d2).copy(after));
     }
     tr.step(new ReplaceStep(pos, pos, new Slice(before.append(after), depth, depth), true));
   }
@@ -4336,13 +4336,13 @@ var AshokanBundle = (() => {
     let $pos = doc3.resolve(pos), index = $pos.index();
     return joinable2($pos.nodeBefore, $pos.nodeAfter) && $pos.parent.canReplace(index, index + 1);
   }
-  function canAppendWithSubstitutedLinebreaks(a, b) {
-    if (!b.content.size)
-      a.type.compatibleContent(b.type);
+  function canAppendWithSubstitutedLinebreaks(a, b2) {
+    if (!b2.content.size)
+      a.type.compatibleContent(b2.type);
     let match = a.contentMatchAt(a.childCount);
     let { linebreakReplacement } = a.type.schema;
-    for (let i = 0; i < b.childCount; i++) {
-      let child = b.child(i);
+    for (let i = 0; i < b2.childCount; i++) {
+      let child = b2.child(i);
       let type = child.type == linebreakReplacement ? a.type.schema.nodes.text : child.type;
       match = match.matchType(type);
       if (!match)
@@ -4352,8 +4352,8 @@ var AshokanBundle = (() => {
     }
     return match.validEnd;
   }
-  function joinable2(a, b) {
-    return !!(a && b && !a.isLeaf && canAppendWithSubstitutedLinebreaks(a, b));
+  function joinable2(a, b2) {
+    return !!(a && b2 && !a.isLeaf && canAppendWithSubstitutedLinebreaks(a, b2));
   }
   function join(tr, pos, depth) {
     let convertNewlines = null;
@@ -4387,19 +4387,19 @@ var AshokanBundle = (() => {
     if ($pos.parent.canReplaceWith($pos.index(), $pos.index(), nodeType))
       return pos;
     if ($pos.parentOffset == 0)
-      for (let d = $pos.depth - 1; d >= 0; d--) {
-        let index = $pos.index(d);
-        if ($pos.node(d).canReplaceWith(index, index, nodeType))
-          return $pos.before(d + 1);
+      for (let d2 = $pos.depth - 1; d2 >= 0; d2--) {
+        let index = $pos.index(d2);
+        if ($pos.node(d2).canReplaceWith(index, index, nodeType))
+          return $pos.before(d2 + 1);
         if (index > 0)
           return null;
       }
     if ($pos.parentOffset == $pos.parent.content.size)
-      for (let d = $pos.depth - 1; d >= 0; d--) {
-        let index = $pos.indexAfter(d);
-        if ($pos.node(d).canReplaceWith(index, index, nodeType))
-          return $pos.after(d + 1);
-        if (index < $pos.node(d).childCount)
+      for (let d2 = $pos.depth - 1; d2 >= 0; d2--) {
+        let index = $pos.indexAfter(d2);
+        if ($pos.node(d2).canReplaceWith(index, index, nodeType))
+          return $pos.after(d2 + 1);
+        if (index < $pos.node(d2).childCount)
           return null;
       }
     return null;
@@ -4412,10 +4412,10 @@ var AshokanBundle = (() => {
     for (let i = 0; i < slice2.openStart; i++)
       content = content.firstChild.content;
     for (let pass = 1; pass <= (slice2.openStart == 0 && slice2.size ? 2 : 1); pass++) {
-      for (let d = $pos.depth; d >= 0; d--) {
-        let bias = d == $pos.depth ? 0 : $pos.pos <= ($pos.start(d + 1) + $pos.end(d + 1)) / 2 ? -1 : 1;
-        let insertPos = $pos.index(d) + (bias > 0 ? 1 : 0);
-        let parent = $pos.node(d), fits = false;
+      for (let d2 = $pos.depth; d2 >= 0; d2--) {
+        let bias = d2 == $pos.depth ? 0 : $pos.pos <= ($pos.start(d2 + 1) + $pos.end(d2 + 1)) / 2 ? -1 : 1;
+        let insertPos = $pos.index(d2) + (bias > 0 ? 1 : 0);
+        let parent = $pos.node(d2), fits = false;
         if (pass == 1) {
           fits = parent.canReplace(insertPos, insertPos, content);
         } else {
@@ -4423,7 +4423,7 @@ var AshokanBundle = (() => {
           fits = wrapping && parent.canReplaceWith(insertPos, insertPos, wrapping[0]);
         }
         if (fits)
-          return bias == 0 ? $pos.pos : bias < 0 ? $pos.before(d + 1) : $pos.after(d + 1);
+          return bias == 0 ? $pos.pos : bias < 0 ? $pos.before(d2 + 1) : $pos.after(d2 + 1);
       }
     }
     return null;
@@ -4489,12 +4489,12 @@ var AshokanBundle = (() => {
     // depths, one for the slice and one for the frontier.
     findFittable() {
       let startDepth = this.unplaced.openStart;
-      for (let cur = this.unplaced.content, d = 0, openEnd = this.unplaced.openEnd; d < startDepth; d++) {
+      for (let cur = this.unplaced.content, d2 = 0, openEnd = this.unplaced.openEnd; d2 < startDepth; d2++) {
         let node = cur.firstChild;
         if (cur.childCount > 1)
           openEnd = 0;
-        if (node.type.spec.isolating && openEnd <= d) {
-          startDepth = d;
+        if (node.type.spec.isolating && openEnd <= d2) {
+          startDepth = d2;
           break;
         }
         cur = node.content;
@@ -4559,13 +4559,13 @@ var AshokanBundle = (() => {
       }
       let openEndCount = fragment.size + sliceDepth - (slice2.content.size - slice2.openEnd);
       while (taken < fragment.childCount) {
-        let next = fragment.child(taken), matches2 = match.matchType(next.type);
+        let next2 = fragment.child(taken), matches2 = match.matchType(next2.type);
         if (!matches2)
           break;
         taken++;
-        if (taken > 1 || openStart == 0 || next.content.size) {
+        if (taken > 1 || openStart == 0 || next2.content.size) {
           match = matches2;
-          add.push(closeNodeStart(next.mark(type.allowedMarks(next.marks)), taken == 1 ? openStart : 0, taken == fragment.childCount ? openEndCount : -1));
+          add.push(closeNodeStart(next2.mark(type.allowedMarks(next2.marks)), taken == 1 ? openStart : 0, taken == fragment.childCount ? openEndCount : -1));
         }
       }
       let toEnd = taken == fragment.childCount;
@@ -4600,9 +4600,9 @@ var AshokanBundle = (() => {
         let fit = contentAfterFits($to, i, type, match, dropInner);
         if (!fit)
           continue;
-        for (let d = i - 1; d >= 0; d--) {
-          let { match: match2, type: type2 } = this.frontier[d];
-          let matches2 = contentAfterFits($to, d, type2, match2, true);
+        for (let d2 = i - 1; d2 >= 0; d2--) {
+          let { match: match2, type: type2 } = this.frontier[d2];
+          let matches2 = contentAfterFits($to, d2, type2, match2, true);
           if (!matches2 || matches2.childCount)
             continue scan;
         }
@@ -4618,8 +4618,8 @@ var AshokanBundle = (() => {
       if (close2.fit.childCount)
         this.placed = addToFragment(this.placed, close2.depth, close2.fit);
       $to = close2.move;
-      for (let d = close2.depth + 1; d <= $to.depth; d++) {
-        let node = $to.node(d), add = node.type.contentMatch.fillBefore(node.content, true, $to.index(d));
+      for (let d2 = close2.depth + 1; d2 <= $to.depth; d2++) {
+        let node = $to.node(d2), add = node.type.contentMatch.fillBefore(node.content, true, $to.index(d2));
         this.openFrontierNode(node.type, node.attrs, add);
       }
       return $to;
@@ -4692,14 +4692,14 @@ var AshokanBundle = (() => {
       targetDepths.pop();
     let preferredTarget = -($from.depth + 1);
     targetDepths.unshift(preferredTarget);
-    for (let d = $from.depth, pos = $from.pos - 1; d > 0; d--, pos--) {
-      let spec = $from.node(d).type.spec;
+    for (let d2 = $from.depth, pos = $from.pos - 1; d2 > 0; d2--, pos--) {
+      let spec = $from.node(d2).type.spec;
       if (spec.defining || spec.definingAsContext || spec.isolating)
         break;
-      if (targetDepths.indexOf(d) > -1)
-        preferredTarget = d;
-      else if ($from.before(d) == pos)
-        targetDepths.splice(1, 0, -d);
+      if (targetDepths.indexOf(d2) > -1)
+        preferredTarget = d2;
+      else if ($from.before(d2) == pos)
+        targetDepths.splice(1, 0, -d2);
     }
     let preferredTargetIndex = targetDepths.indexOf(preferredTarget);
     let leftNodes = [], preferredDepth = slice2.openStart;
@@ -4710,15 +4710,15 @@ var AshokanBundle = (() => {
         break;
       content = node.content;
     }
-    for (let d = preferredDepth - 1; d >= 0; d--) {
-      let leftNode = leftNodes[d], def = definesContent(leftNode.type);
+    for (let d2 = preferredDepth - 1; d2 >= 0; d2--) {
+      let leftNode = leftNodes[d2], def = definesContent(leftNode.type);
       if (def && !leftNode.sameMarkup($from.node(Math.abs(preferredTarget) - 1)))
-        preferredDepth = d;
+        preferredDepth = d2;
       else if (def || !leftNode.type.isTextblock)
         break;
     }
-    for (let j = slice2.openStart; j >= 0; j--) {
-      let openDepth = (j + preferredDepth + 1) % (slice2.openStart + 1);
+    for (let j2 = slice2.openStart; j2 >= 0; j2--) {
+      let openDepth = (j2 + preferredDepth + 1) % (slice2.openStart + 1);
       let insert = leftNodes[openDepth];
       if (!insert)
         continue;
@@ -4769,17 +4769,17 @@ var AshokanBundle = (() => {
     let $from = tr.doc.resolve(from2), $to = tr.doc.resolve(to);
     if ($from.parent.isTextblock && $to.parent.isTextblock && $from.start() != $to.start() && $from.parentOffset == 0 && $to.parentOffset == 0) {
       let shared = $from.sharedDepth(to), isolated = false;
-      for (let d = $from.depth; d > shared; d--)
-        if ($from.node(d).type.spec.isolating)
+      for (let d2 = $from.depth; d2 > shared; d2--)
+        if ($from.node(d2).type.spec.isolating)
           isolated = true;
-      for (let d = $to.depth; d > shared; d--)
-        if ($to.node(d).type.spec.isolating)
+      for (let d2 = $to.depth; d2 > shared; d2--)
+        if ($to.node(d2).type.spec.isolating)
           isolated = true;
       if (!isolated) {
-        for (let d = $from.depth; d > 0 && from2 == $from.start(d); d--)
-          from2 = $from.before(d);
-        for (let d = $to.depth; d > 0 && to == $to.start(d); d--)
-          to = $to.before(d);
+        for (let d2 = $from.depth; d2 > 0 && from2 == $from.start(d2); d2--)
+          from2 = $from.before(d2);
+        for (let d2 = $to.depth; d2 > 0 && to == $to.start(d2); d2--)
+          to = $to.before(d2);
         $from = tr.doc.resolve(from2);
         $to = tr.doc.resolve(to);
       }
@@ -4792,20 +4792,20 @@ var AshokanBundle = (() => {
       if (depth > 0 && (last || $from.node(depth - 1).canReplace($from.index(depth - 1), $to.indexAfter(depth - 1))))
         return tr.delete($from.before(depth), $to.after(depth));
     }
-    for (let d = 1; d <= $from.depth && d <= $to.depth; d++) {
-      if (from2 - $from.start(d) == $from.depth - d && to > $from.end(d) && $to.end(d) - to != $to.depth - d && $from.start(d - 1) == $to.start(d - 1) && $from.node(d - 1).canReplace($from.index(d - 1), $to.index(d - 1)))
-        return tr.delete($from.before(d), to);
+    for (let d2 = 1; d2 <= $from.depth && d2 <= $to.depth; d2++) {
+      if (from2 - $from.start(d2) == $from.depth - d2 && to > $from.end(d2) && $to.end(d2) - to != $to.depth - d2 && $from.start(d2 - 1) == $to.start(d2 - 1) && $from.node(d2 - 1).canReplace($from.index(d2 - 1), $to.index(d2 - 1)))
+        return tr.delete($from.before(d2), to);
     }
     tr.delete(from2, to);
   }
   function coveredDepths($from, $to) {
     let result = [], minDepth = Math.min($from.depth, $to.depth);
-    for (let d = minDepth; d >= 0; d--) {
-      let start = $from.start(d);
-      if (start < $from.pos - ($from.depth - d) || $to.end(d) > $to.pos + ($to.depth - d) || $from.node(d).type.spec.isolating || $to.node(d).type.spec.isolating)
+    for (let d2 = minDepth; d2 >= 0; d2--) {
+      let start = $from.start(d2);
+      if (start < $from.pos - ($from.depth - d2) || $to.end(d2) > $to.pos + ($to.depth - d2) || $from.node(d2).type.spec.isolating || $to.node(d2).type.spec.isolating)
         break;
-      if (start == $to.start(d) || d == $from.depth && d == $to.depth && $from.parent.inlineContent && $to.parent.inlineContent && d && $to.start(d - 1) == start - 1)
-        result.push(d);
+      if (start == $to.start(d2) || d2 == $from.depth && d2 == $to.depth && $from.parent.inlineContent && $to.parent.inlineContent && d2 && $to.start(d2 - 1) == start - 1)
+        result.push(d2);
     }
     return result;
   }
@@ -5781,7 +5781,7 @@ var AshokanBundle = (() => {
     and can thus safely be extended.
     */
     get isGeneric() {
-      for (let _ in this.meta)
+      for (let _2 in this.meta)
         return false;
       return true;
     }
@@ -5920,8 +5920,8 @@ var AshokanBundle = (() => {
               tr.setMeta("appendedTransaction", rootTr);
               if (!seen) {
                 seen = [];
-                for (let j = 0; j < this.config.plugins.length; j++)
-                  seen.push(j < i ? { state: newState, n: trs.length } : { state: this, n: 0 });
+                for (let j2 = 0; j2 < this.config.plugins.length; j2++)
+                  seen.push(j2 < i ? { state: newState, n: trs.length } : { state: this, n: 0 });
               }
               trs.push(tr);
               newState = newState.applyInner(tr);
@@ -5991,7 +5991,7 @@ var AshokanBundle = (() => {
     toJSON(pluginFields) {
       let result = { doc: this.doc.toJSON(), selection: this.selection.toJSON() };
       if (this.storedMarks)
-        result.storedMarks = this.storedMarks.map((m) => m.toJSON());
+        result.storedMarks = this.storedMarks.map((m2) => m2.toJSON());
       if (pluginFields && typeof pluginFields == "object")
         for (let prop in pluginFields) {
           if (prop == "doc" || prop == "selection")
@@ -6222,17 +6222,17 @@ var AshokanBundle = (() => {
       elt = elt.shadowRoot.activeElement;
     return elt;
   }
-  function caretFromPoint(doc3, x, y) {
+  function caretFromPoint(doc3, x2, y2) {
     if (doc3.caretPositionFromPoint) {
       try {
-        let pos = doc3.caretPositionFromPoint(x, y);
+        let pos = doc3.caretPositionFromPoint(x2, y2);
         if (pos)
           return { node: pos.offsetNode, offset: Math.min(nodeSize(pos.offsetNode), pos.offset) };
-      } catch (_) {
+      } catch (_2) {
       }
     }
     if (doc3.caretRangeFromPoint) {
-      let range = doc3.caretRangeFromPoint(x, y);
+      let range = doc3.caretRangeFromPoint(x2, y2);
       if (range)
         return { node: range.startContainer, offset: Math.min(nodeSize(range.startContainer), range.startOffset) };
     }
@@ -6331,8 +6331,8 @@ var AshokanBundle = (() => {
   function storeScrollPos(view2) {
     let rect = view2.dom.getBoundingClientRect(), startY = Math.max(0, rect.top);
     let refDOM, refTop;
-    for (let x = (rect.left + rect.right) / 2, y = startY + 1; y < Math.min(innerHeight, rect.bottom); y += 5) {
-      let dom = view2.root.elementFromPoint(x, y);
+    for (let x2 = (rect.left + rect.right) / 2, y2 = startY + 1; y2 < Math.min(innerHeight, rect.bottom); y2 += 5) {
+      let dom = view2.root.elementFromPoint(x2, y2);
       if (!dom || dom == view2.dom || !view2.dom.contains(dom))
         continue;
       let localRect = dom.getBoundingClientRect();
@@ -6499,8 +6499,8 @@ var AshokanBundle = (() => {
         let child = element.childNodes[i];
         if (child.nodeType == 1) {
           let rects = child.getClientRects();
-          for (let j = 0; j < rects.length; j++) {
-            let rect = rects[j];
+          for (let j2 = 0; j2 < rects.length; j2++) {
+            let rect = rects[j2];
             if (inRect(coords, rect))
               return elementFromPoint(child, coords, rect);
           }
@@ -6536,8 +6536,8 @@ var AshokanBundle = (() => {
       if (gecko && node.nodeType == 1) {
         offset = Math.min(offset, node.childNodes.length);
         if (offset < node.childNodes.length) {
-          let next = node.childNodes[offset], box;
-          if (next.nodeName == "IMG" && (box = next.getBoundingClientRect()).right <= coords.left && box.bottom > coords.top)
+          let next2 = node.childNodes[offset], box;
+          if (next2.nodeName == "IMG" && (box = next2.getBoundingClientRect()).right <= coords.left && box.bottom > coords.top)
             offset++;
         }
       }
@@ -6631,14 +6631,14 @@ var AshokanBundle = (() => {
   function flattenV(rect, left) {
     if (rect.width == 0)
       return rect;
-    let x = left ? rect.left : rect.right;
-    return { top: rect.top, bottom: rect.bottom, left: x, right: x };
+    let x2 = left ? rect.left : rect.right;
+    return { top: rect.top, bottom: rect.bottom, left: x2, right: x2 };
   }
   function flattenH(rect, top) {
     if (rect.height == 0)
       return rect;
-    let y = top ? rect.top : rect.bottom;
-    return { top: y, bottom: y, left: rect.left, right: rect.right };
+    let y2 = top ? rect.top : rect.bottom;
+    return { top: y2, bottom: y2, left: rect.left, right: rect.right };
   }
   function withFlushedState(view2, state, f) {
     let viewState = view2.state, active = view2.root.activeElement;
@@ -6710,7 +6710,7 @@ var AshokanBundle = (() => {
         sel.collapse(anchorNode, anchorOffset);
         if (oldNode && (oldNode != anchorNode || oldOff != anchorOffset) && sel.extend)
           sel.extend(oldNode, oldOff);
-      } catch (_) {
+      } catch (_2) {
       }
       if (oldBidiLevel != null)
         sel.caretBidiLevel = oldBidiLevel;
@@ -6933,15 +6933,15 @@ var AshokanBundle = (() => {
           return prev.domFromPos(prev.size, side);
         return { node: this.contentDOM, offset: prev ? domIndex(prev.dom) + 1 : 0 };
       } else {
-        let next, enter = true;
+        let next2, enter = true;
         for (; ; i++, enter = false) {
-          next = i < this.children.length ? this.children[i] : null;
-          if (!next || next.dom.parentNode == this.contentDOM)
+          next2 = i < this.children.length ? this.children[i] : null;
+          if (!next2 || next2.dom.parentNode == this.contentDOM)
             break;
         }
-        if (next && enter && !next.border && !next.domAtom)
-          return next.domFromPos(0, side);
-        return { node: this.contentDOM, offset: next ? domIndex(next.dom) : this.contentDOM.childNodes.length };
+        if (next2 && enter && !next2.border && !next2.domAtom)
+          return next2.domFromPos(0, side);
+        return { node: this.contentDOM, offset: next2 ? domIndex(next2.dom) : this.contentDOM.childNodes.length };
       }
     }
     // Used to find a DOM range in a single parent for a given changed
@@ -6957,8 +6957,8 @@ var AshokanBundle = (() => {
           if (from2 >= childBase && to <= end - child.border && child.node && child.contentDOM && this.contentDOM.contains(child.contentDOM))
             return child.parseRange(from2, to, childBase);
           from2 = offset;
-          for (let j = i; j > 0; j--) {
-            let prev = this.children[j - 1];
+          for (let j2 = i; j2 > 0; j2--) {
+            let prev = this.children[j2 - 1];
             if (prev.size && prev.dom.parentNode == this.contentDOM && !prev.emptyChildAt(1)) {
               fromOffset = domIndex(prev.dom) + 1;
               break;
@@ -6970,13 +6970,13 @@ var AshokanBundle = (() => {
         }
         if (fromOffset > -1 && (end > to || i == this.children.length - 1)) {
           to = end;
-          for (let j = i + 1; j < this.children.length; j++) {
-            let next = this.children[j];
-            if (next.size && next.dom.parentNode == this.contentDOM && !next.emptyChildAt(-1)) {
-              toOffset = domIndex(next.dom);
+          for (let j2 = i + 1; j2 < this.children.length; j2++) {
+            let next2 = this.children[j2];
+            if (next2.size && next2.dom.parentNode == this.contentDOM && !next2.emptyChildAt(-1)) {
+              toOffset = domIndex(next2.dom);
               break;
             }
-            to += next.size;
+            to += next2.size;
           }
           if (toOffset == -1)
             toOffset = this.contentDOM.childNodes.length;
@@ -7051,7 +7051,7 @@ var AshokanBundle = (() => {
           if (anchor != head)
             domSel.extend(headDOM.node, headDOM.offset);
           domSelExtended = true;
-        } catch (_) {
+        } catch (_2) {
         }
       }
       if (!domSelExtended) {
@@ -7666,9 +7666,9 @@ var AshokanBundle = (() => {
     }
     if (prev.style != cur.style) {
       if (prev.style) {
-        let prop = /\s*([\w\-\xa1-\uffff]+)\s*:(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\(.*?\)|[^;])*/g, m;
-        while (m = prop.exec(prev.style))
-          dom.style.removeProperty(m[1]);
+        let prop = /\s*([\w\-\xa1-\uffff]+)\s*:(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\(.*?\)|[^;])*/g, m2;
+        while (m2 = prop.exec(prev.style))
+          dom.style.removeProperty(m2[1]);
       }
       if (cur.style)
         dom.style.cssText += cur.style;
@@ -7677,18 +7677,18 @@ var AshokanBundle = (() => {
   function applyOuterDeco(dom, deco, node) {
     return patchOuterDeco(dom, dom, noDeco, computeOuterDeco(deco, node, dom.nodeType != 1));
   }
-  function sameOuterDeco(a, b) {
-    if (a.length != b.length)
+  function sameOuterDeco(a, b2) {
+    if (a.length != b2.length)
       return false;
     for (let i = 0; i < a.length; i++)
-      if (!a[i].type.eq(b[i].type))
+      if (!a[i].type.eq(b2[i].type))
         return false;
     return true;
   }
   function rm(dom) {
-    let next = dom.nextSibling;
+    let next2 = dom.nextSibling;
     dom.parentNode.removeChild(dom);
-    return next;
+    return next2;
   }
   var ViewTreeUpdater = class {
     constructor(top, lock, view2) {
@@ -7734,8 +7734,8 @@ var AshokanBundle = (() => {
         if (parentIndex < this.preMatch.index)
           scanTo = Math.min(this.index + 3, scanTo);
         for (let i = this.index; i < scanTo; i++) {
-          let next = this.top.children[i];
-          if (next.matchesMark(marks2[depth]) && !this.isLocked(next.dom)) {
+          let next2 = this.top.children[i];
+          if (next2.matchesMark(marks2[depth]) && !this.isLocked(next2.dom)) {
             found2 = i;
             break;
           }
@@ -7816,20 +7816,20 @@ var AshokanBundle = (() => {
     // pre-matches to avoid overwriting nodes that could still be used.
     updateNextNode(node, outerDeco, innerDeco, view2, index, pos) {
       for (let i = this.index; i < this.top.children.length; i++) {
-        let next = this.top.children[i];
-        if (next instanceof NodeViewDesc) {
-          let preMatch2 = this.preMatch.matched.get(next);
+        let next2 = this.top.children[i];
+        if (next2 instanceof NodeViewDesc) {
+          let preMatch2 = this.preMatch.matched.get(next2);
           if (preMatch2 != null && preMatch2 != index)
             return false;
-          let nextDOM = next.dom, updated;
-          let locked = this.isLocked(nextDOM) && !(node.isText && next.node && next.node.isText && next.nodeDOM.nodeValue == node.text && next.dirty != NODE_DIRTY && sameOuterDeco(outerDeco, next.outerDeco));
-          if (!locked && next.update(node, outerDeco, innerDeco, view2)) {
+          let nextDOM = next2.dom, updated;
+          let locked = this.isLocked(nextDOM) && !(node.isText && next2.node && next2.node.isText && next2.nodeDOM.nodeValue == node.text && next2.dirty != NODE_DIRTY && sameOuterDeco(outerDeco, next2.outerDeco));
+          if (!locked && next2.update(node, outerDeco, innerDeco, view2)) {
             this.destroyBetween(this.index, i);
-            if (next.dom != nextDOM)
+            if (next2.dom != nextDOM)
               this.changed = true;
             this.index++;
             return true;
-          } else if (!locked && (updated = this.recreateWrapper(next, node, outerDeco, innerDeco, view2, pos))) {
+          } else if (!locked && (updated = this.recreateWrapper(next2, node, outerDeco, innerDeco, view2, pos))) {
             this.destroyBetween(this.index, i);
             this.top.children[this.index] = updated;
             if (updated.contentDOM) {
@@ -7848,17 +7848,17 @@ var AshokanBundle = (() => {
     }
     // When a node with content is replaced by a different node with
     // identical content, move over its children.
-    recreateWrapper(next, node, outerDeco, innerDeco, view2, pos) {
-      if (next.dirty || node.isAtom || !next.children.length || !next.node.content.eq(node.content) || !sameOuterDeco(outerDeco, next.outerDeco) || !innerDeco.eq(next.innerDeco))
+    recreateWrapper(next2, node, outerDeco, innerDeco, view2, pos) {
+      if (next2.dirty || node.isAtom || !next2.children.length || !next2.node.content.eq(node.content) || !sameOuterDeco(outerDeco, next2.outerDeco) || !innerDeco.eq(next2.innerDeco))
         return null;
       let wrapper = NodeViewDesc.create(this.top, node, outerDeco, innerDeco, view2, pos);
       if (wrapper.contentDOM) {
-        wrapper.children = next.children;
-        next.children = [];
+        wrapper.children = next2.children;
+        next2.children = [];
         for (let ch of wrapper.children)
           ch.parent = wrapper;
       }
-      next.destroy();
+      next2.destroy();
       return wrapper;
     }
     // Insert the node as a newly created node desc.
@@ -7870,8 +7870,8 @@ var AshokanBundle = (() => {
       this.changed = true;
     }
     placeWidget(widget, view2, pos) {
-      let next = this.index < this.top.children.length ? this.top.children[this.index] : null;
-      if (next && next.matchesWidget(widget) && (widget == next.widget || !next.widget.type.toDOM.parentNode)) {
+      let next2 = this.index < this.top.children.length ? this.top.children[this.index] : null;
+      if (next2 && next2.matchesWidget(widget) && (widget == next2.widget || !next2.widget.type.toDOM.parentNode)) {
         this.index++;
       } else {
         let desc = new WidgetViewDesc(this.top, widget, view2, pos);
@@ -7924,12 +7924,12 @@ var AshokanBundle = (() => {
       let desc;
       for (; ; ) {
         if (descI) {
-          let next = curDesc.children[descI - 1];
-          if (next instanceof MarkViewDesc) {
-            curDesc = next;
-            descI = next.children.length;
+          let next2 = curDesc.children[descI - 1];
+          if (next2 instanceof MarkViewDesc) {
+            curDesc = next2;
+            descI = next2.children.length;
           } else {
-            desc = next;
+            desc = next2;
             descI--;
             break;
           }
@@ -7951,8 +7951,8 @@ var AshokanBundle = (() => {
     }
     return { index: fI, matched, matches: matches2.reverse() };
   }
-  function compareSide(a, b) {
-    return a.type.side - b.type.side;
+  function compareSide(a, b2) {
+    return a.type.side - b2.type.side;
   }
   function iterDeco(parent, deco, onWidget, onNode) {
     let locals = deco.locals(parent), offset = 0;
@@ -7968,12 +7968,12 @@ var AshokanBundle = (() => {
     for (let parentIndex = 0; ; ) {
       let widget, widgets;
       while (decoIndex < locals.length && locals[decoIndex].to == offset) {
-        let next = locals[decoIndex++];
-        if (next.widget) {
+        let next2 = locals[decoIndex++];
+        if (next2.widget) {
           if (!widget)
-            widget = next;
+            widget = next2;
           else
-            (widgets || (widgets = [widget])).push(next);
+            (widgets || (widgets = [widget])).push(next2);
         }
       }
       if (widget) {
@@ -8019,7 +8019,7 @@ var AshokanBundle = (() => {
         while (decoIndex < locals.length && locals[decoIndex].to < end)
           decoIndex++;
       }
-      let outerDeco = child.isInline && !child.isLeaf ? active.filter((d) => !d.inline) : active.slice();
+      let outerDeco = child.isInline && !child.isLeaf ? active.filter((d2) => !d2.inline) : active.slice();
       onNode(child, outerDeco, deco.forChild(offset, child), index);
       offset = end;
     }
@@ -8040,11 +8040,11 @@ var AshokanBundle = (() => {
         continue;
       let str = child.text;
       while (i < frag.childCount) {
-        let next = frag.child(i++);
-        pos += next.nodeSize;
-        if (!next.isText)
+        let next2 = frag.child(i++);
+        pos += next2.nodeSize;
+        if (!next2.isText)
           break;
-        str += next.text;
+        str += next2.text;
       }
       if (pos >= from2) {
         if (pos >= to && str.slice(to - text.length - childStart, to - childStart) == text)
@@ -8257,7 +8257,7 @@ var AshokanBundle = (() => {
       return false;
     try {
       return view2.dom.contains(sel.anchorNode.nodeType == 3 ? sel.anchorNode.parentNode : sel.anchorNode) && (view2.editable || view2.dom.contains(sel.focusNode.nodeType == 3 ? sel.focusNode.parentNode : sel.focusNode));
-    } catch (_) {
+    } catch (_2) {
       return false;
     }
   }
@@ -8288,9 +8288,9 @@ var AshokanBundle = (() => {
       } else if (!sel.empty) {
         return false;
       } else if (view2.endOfTextblock(dir > 0 ? "forward" : "backward")) {
-        let next = moveSelectionBlock(view2.state, dir);
-        if (next && next instanceof NodeSelection)
-          return apply(view2, next);
+        let next2 = moveSelectionBlock(view2.state, dir);
+        if (next2 && next2 instanceof NodeSelection)
+          return apply(view2, next2);
         return false;
       } else if (!(mac && mods.indexOf("m") > -1)) {
         let $head = sel.$head, node = $head.textOffset ? null : dir < 0 ? $head.nodeBefore : $head.nodeAfter, desc;
@@ -8310,9 +8310,9 @@ var AshokanBundle = (() => {
     } else if (sel instanceof NodeSelection && sel.node.isInline) {
       return apply(view2, new TextSelection(dir > 0 ? sel.$to : sel.$from));
     } else {
-      let next = moveSelectionBlock(view2.state, dir);
-      if (next)
-        return apply(view2, next);
+      let next2 = moveSelectionBlock(view2.state, dir);
+      if (next2)
+        return apply(view2, next2);
       return false;
     }
   }
@@ -8394,19 +8394,19 @@ var AshokanBundle = (() => {
       } else if (isBlockNode(node)) {
         break;
       } else {
-        let next = node.nextSibling;
-        while (next && isIgnorable(next, 1)) {
-          moveNode = next.parentNode;
-          moveOffset = domIndex(next) + 1;
-          next = next.nextSibling;
+        let next2 = node.nextSibling;
+        while (next2 && isIgnorable(next2, 1)) {
+          moveNode = next2.parentNode;
+          moveOffset = domIndex(next2) + 1;
+          next2 = next2.nextSibling;
         }
-        if (!next) {
+        if (!next2) {
           node = node.parentNode;
           if (node == view2.dom)
             break;
           offset = len = 0;
         } else {
-          node = next;
+          node = next2;
           offset = 0;
           len = nodeLen(node);
         }
@@ -8425,12 +8425,12 @@ var AshokanBundle = (() => {
       node = node.parentNode;
     }
     while (node && offset < node.childNodes.length) {
-      let next = node.childNodes[offset];
-      if (next.nodeType == 3)
-        return next;
-      if (next.nodeType == 1 && next.contentEditable == "false")
+      let next2 = node.childNodes[offset];
+      if (next2.nodeType == 3)
+        return next2;
+      if (next2.nodeType == 1 && next2.contentEditable == "false")
         break;
-      node = next;
+      node = next2;
       offset = 0;
     }
   }
@@ -8440,12 +8440,12 @@ var AshokanBundle = (() => {
       node = node.parentNode;
     }
     while (node && offset) {
-      let next = node.childNodes[offset - 1];
-      if (next.nodeType == 3)
-        return next;
-      if (next.nodeType == 1 && next.contentEditable == "false")
+      let next2 = node.childNodes[offset - 1];
+      if (next2.nodeType == 3)
+        return next2;
+      if (next2.nodeType == 1 && next2.contentEditable == "false")
         break;
-      node = next;
+      node = next2;
       offset = node.childNodes.length;
     }
   }
@@ -8507,9 +8507,9 @@ var AshokanBundle = (() => {
       return false;
     let { $from, $to } = sel;
     if (!$from.parent.inlineContent || view2.endOfTextblock(dir < 0 ? "up" : "down")) {
-      let next = moveSelectionBlock(view2.state, dir);
-      if (next && next instanceof NodeSelection)
-        return apply(view2, next);
+      let next2 = moveSelectionBlock(view2.state, dir);
+      if (next2 && next2 instanceof NodeSelection)
+        return apply(view2, next2);
     }
     if (!$from.parent.inlineContent) {
       let side = dir < 0 ? $from : $to;
@@ -8705,9 +8705,9 @@ var AshokanBundle = (() => {
   function normalizeSiblings(fragment, $context) {
     if (fragment.childCount < 2)
       return fragment;
-    for (let d = $context.depth; d >= 0; d--) {
-      let parent = $context.node(d);
-      let match = parent.contentMatchAt($context.index(d));
+    for (let d2 = $context.depth; d2 >= 0; d2--) {
+      let parent = $context.node(d2);
+      let match = parent.contentMatchAt($context.index(d2));
       let lastWrap, result = [];
       fragment.forEach((node) => {
         if (!result)
@@ -8807,8 +8807,8 @@ var AshokanBundle = (() => {
         elt = elt.querySelector(wrap2[i]) || elt;
     for (let i = 0; i < doc3.styleSheets.length; i++) {
       let style = doc3.styleSheets[i];
-      for (let j = 0; j < style.rules.length; j++) {
-        let rule = style.rules[j];
+      for (let j2 = 0; j2 < style.rules.length; j2++) {
+        let rule = style.rules[j2];
         if (rule instanceof CSSStyleRule) {
           let matches2 = elt.querySelectorAll(rule.selectorText);
           for (let k = 0; k < matches2.length; k++)
@@ -9272,7 +9272,7 @@ var AshokanBundle = (() => {
     if (!view2.composing) {
       view2.domObserver.flush();
       let { state } = view2, $pos = state.selection.$to;
-      if (state.selection instanceof TextSelection && (state.storedMarks || !$pos.textOffset && $pos.parentOffset && $pos.nodeBefore.marks.some((m) => m.type.spec.inclusive === false) || chrome && windows && selectionBeforeUneditable(view2))) {
+      if (state.selection instanceof TextSelection && (state.storedMarks || !$pos.textOffset && $pos.parentOffset && $pos.nodeBefore.marks.some((m2) => m2.type.spec.inclusive === false) || chrome && windows && selectionBeforeUneditable(view2))) {
         view2.markCursor = view2.state.storedMarks || $pos.marks();
         endComposition(view2, true);
         view2.markCursor = null;
@@ -9304,8 +9304,8 @@ var AshokanBundle = (() => {
     let { focusNode, focusOffset } = view2.domSelectionRange();
     if (!focusNode || focusNode.nodeType != 1 || focusOffset >= focusNode.childNodes.length)
       return false;
-    let next = focusNode.childNodes[focusOffset];
-    return next.nodeType == 1 && next.contentEditable == "false";
+    let next2 = focusNode.childNodes[focusOffset];
+    return next2.nodeType == 1 && next2.contentEditable == "false";
   }
   editHandlers.compositionend = (view2, event) => {
     if (view2.composing) {
@@ -9509,7 +9509,7 @@ var AshokanBundle = (() => {
         view2.dragging = null;
     }, 50);
   };
-  editHandlers.dragover = editHandlers.dragenter = (_, e) => e.preventDefault();
+  editHandlers.dragover = editHandlers.dragenter = (_2, e) => e.preventDefault();
   editHandlers.drop = (view2, event) => {
     try {
       handleDrop(view2, event, view2.dragging);
@@ -9615,13 +9615,13 @@ var AshokanBundle = (() => {
   };
   for (let prop in editHandlers)
     handlers[prop] = editHandlers[prop];
-  function compareObjs(a, b) {
-    if (a == b)
+  function compareObjs(a, b2) {
+    if (a == b2)
       return true;
     for (let p in a)
-      if (a[p] !== b[p])
+      if (a[p] !== b2[p])
         return false;
-    for (let p in b)
+    for (let p in b2)
       if (!(p in a))
         return false;
     return true;
@@ -9657,7 +9657,7 @@ var AshokanBundle = (() => {
       let to = mapping.map(span.to + oldOffset, this.spec.inclusiveEnd ? 1 : -1) - offset;
       return from2 >= to ? null : new Decoration(from2, to, this);
     }
-    valid(_, span) {
+    valid(_2, span) {
       return span.from < span.to;
     }
     eq(other) {
@@ -9885,10 +9885,10 @@ var AshokanBundle = (() => {
       for (let i = 0; i < children.length; i += 3) {
         let found2;
         let from2 = children[i] + offset, to = children[i + 1] + offset;
-        for (let j = 0, span; j < decorations.length; j++)
-          if (span = decorations[j]) {
+        for (let j2 = 0, span; j2 < decorations.length; j2++)
+          if (span = decorations[j2]) {
             if (span.from > from2 && span.to < to) {
-              decorations[j] = null;
+              decorations[j2] = null;
               (found2 || (found2 = [])).push(span);
             }
           }
@@ -9907,11 +9907,11 @@ var AshokanBundle = (() => {
       if (local.length) {
         for (let i = 0, span; i < decorations.length; i++)
           if (span = decorations[i]) {
-            for (let j = 0; j < local.length; j++)
-              if (local[j].eq(span, offset)) {
+            for (let j2 = 0; j2 < local.length; j2++)
+              if (local[j2].eq(span, offset)) {
                 if (local == this.local)
                   local = this.local.slice();
-                local.splice(j--, 1);
+                local.splice(j2--, 1);
               }
           }
       }
@@ -10034,8 +10034,8 @@ var AshokanBundle = (() => {
             result = result.slice();
             sorted = false;
           }
-          for (let j = 0; j < locals.length; j++)
-            result.push(locals[j]);
+          for (let j2 = 0; j2 < locals.length; j2++)
+            result.push(locals[j2]);
         }
       }
       return result ? removeOverlap(sorted ? result : result.sort(byPos)) : none;
@@ -10049,7 +10049,7 @@ var AshokanBundle = (() => {
         case 1:
           return members[0];
         default:
-          return new _DecorationGroup(members.every((m) => m instanceof DecorationSet) ? members : members.reduce((r, m) => r.concat(m instanceof DecorationSet ? m : m.members), []));
+          return new _DecorationGroup(members.every((m2) => m2 instanceof DecorationSet) ? members : members.reduce((r, m2) => r.concat(m2 instanceof DecorationSet ? m2 : m2.members), []));
       }
     }
     forEachSet(f) {
@@ -10118,11 +10118,11 @@ var AshokanBundle = (() => {
           children.splice(i, 3);
           i -= 3;
         }
-      for (let i = 0, j = 0; i < built.children.length; i += 3) {
+      for (let i = 0, j2 = 0; i < built.children.length; i += 3) {
         let from2 = built.children[i];
-        while (j < children.length && children[j] < from2)
-          j += 3;
-        children.splice(j, 0, built.children[i], built.children[i + 1], built.children[i + 2]);
+        while (j2 < children.length && children[j2] < from2)
+          j2 += 3;
+        children.splice(j2, 0, built.children[i], built.children[i + 1], built.children[i + 2]);
       }
     }
     return new DecorationSet(newLocal.sort(byPos), children);
@@ -10193,30 +10193,30 @@ var AshokanBundle = (() => {
       }
     return locals.length || children.length ? new DecorationSet(locals, children) : empty;
   }
-  function byPos(a, b) {
-    return a.from - b.from || a.to - b.to;
+  function byPos(a, b2) {
+    return a.from - b2.from || a.to - b2.to;
   }
   function removeOverlap(spans) {
     let working = spans;
     for (let i = 0; i < working.length - 1; i++) {
       let span = working[i];
       if (span.from != span.to)
-        for (let j = i + 1; j < working.length; j++) {
-          let next = working[j];
-          if (next.from == span.from) {
-            if (next.to != span.to) {
+        for (let j2 = i + 1; j2 < working.length; j2++) {
+          let next2 = working[j2];
+          if (next2.from == span.from) {
+            if (next2.to != span.to) {
               if (working == spans)
                 working = spans.slice();
-              working[j] = next.copy(next.from, span.to);
-              insertAhead(working, j + 1, next.copy(span.to, next.to));
+              working[j2] = next2.copy(next2.from, span.to);
+              insertAhead(working, j2 + 1, next2.copy(span.to, next2.to));
             }
             continue;
           } else {
-            if (next.from < span.to) {
+            if (next2.from < span.to) {
               if (working == spans)
                 working = spans.slice();
-              working[i] = span.copy(span.from, next.from);
-              insertAhead(working, j, span.copy(next.from, span.to));
+              working[i] = span.copy(span.from, next2.from);
+              insertAhead(working, j2, span.copy(next2.from, span.to));
             }
             break;
           }
@@ -10283,9 +10283,9 @@ var AshokanBundle = (() => {
       this.observer = window.MutationObserver && new window.MutationObserver((mutations) => {
         for (let i = 0; i < mutations.length; i++)
           this.queue.push(mutations[i]);
-        if (ie && ie_version <= 11 && mutations.some((m) => m.type == "childList" && m.removedNodes.length || m.type == "characterData" && m.oldValue.length > m.target.nodeValue.length)) {
+        if (ie && ie_version <= 11 && mutations.some((m2) => m2.type == "childList" && m2.removedNodes.length || m2.type == "characterData" && m2.oldValue.length > m2.target.nodeValue.length)) {
           this.flushSoon();
-        } else if (safari && view2.composing && mutations.some((m) => m.type == "childList" && m.target.nodeName == "TR")) {
+        } else if (safari && view2.composing && mutations.some((m2) => m2.type == "childList" && m2.target.nodeName == "TR")) {
           view2.input.badSafariComposition = true;
           this.flushSoon();
         } else {
@@ -10409,7 +10409,7 @@ var AshokanBundle = (() => {
           }
         }
       }
-      if (added.some((n) => n.nodeName == "BR") && (view2.input.lastKeyCode == 8 || view2.input.lastKeyCode == 46 || chrome && (view2.composing || view2.input.compositionEndedAt > Date.now() - 50) && mutations.some((m) => m.type == "childList" && m.removedNodes.length))) {
+      if (added.some((n) => n.nodeName == "BR") && (view2.input.lastKeyCode == 8 || view2.input.lastKeyCode == 46 || chrome && (view2.composing || view2.input.compositionEndedAt > Date.now() - 50) && mutations.some((m2) => m2.type == "childList" && m2.removedNodes.length))) {
         for (let node of added)
           if (node.nodeName == "BR" && node.parentNode) {
             let after = node.nextSibling;
@@ -10424,9 +10424,9 @@ var AshokanBundle = (() => {
       } else if (gecko && added.length) {
         let brs = added.filter((n) => n.nodeName == "BR");
         if (brs.length == 2) {
-          let [a, b] = brs;
-          if (a.parentNode && a.parentNode.parentNode == b.parentNode)
-            b.remove();
+          let [a, b2] = brs;
+          if (a.parentNode && a.parentNode.parentNode == b2.parentNode)
+            b2.remove();
           else
             a.remove();
         } else {
@@ -10479,19 +10479,19 @@ var AshokanBundle = (() => {
         }
         if (desc.contentDOM && desc.contentDOM != desc.dom && !desc.contentDOM.contains(mut.target))
           return { from: desc.posBefore, to: desc.posAfter };
-        let prev = mut.previousSibling, next = mut.nextSibling;
+        let prev = mut.previousSibling, next2 = mut.nextSibling;
         if (ie && ie_version <= 11 && mut.addedNodes.length) {
           for (let i = 0; i < mut.addedNodes.length; i++) {
             let { previousSibling, nextSibling } = mut.addedNodes[i];
             if (!previousSibling || Array.prototype.indexOf.call(mut.addedNodes, previousSibling) < 0)
               prev = previousSibling;
             if (!nextSibling || Array.prototype.indexOf.call(mut.addedNodes, nextSibling) < 0)
-              next = nextSibling;
+              next2 = nextSibling;
           }
         }
         let fromOffset = prev && prev.parentNode == mut.target ? domIndex(prev) + 1 : 0;
         let from2 = desc.localPosFromDOM(mut.target, fromOffset, -1);
-        let toOffset = next && next.parentNode == mut.target ? domIndex(next) : mut.target.childNodes.length;
+        let toOffset = next2 && next2.parentNode == mut.target ? domIndex(next2) : mut.target.childNodes.length;
         let to = desc.localPosFromDOM(mut.target, toOffset, 1);
         return { from: from2, to };
       } else if (mut.type == "attributes") {
@@ -10841,19 +10841,19 @@ var AshokanBundle = (() => {
       fromEnd = false;
     }
     if (mayOpen) {
-      let next = $pos.node(depth).maybeChild($pos.indexAfter(depth));
-      while (next && !next.isLeaf) {
-        next = next.firstChild;
+      let next2 = $pos.node(depth).maybeChild($pos.indexAfter(depth));
+      while (next2 && !next2.isLeaf) {
+        next2 = next2.firstChild;
         end++;
       }
     }
     return end;
   }
-  function findDiff(a, b, pos, preferredPos, preferredSide) {
-    let start = a.findDiffStart(b, pos), lenA = pos + a.size, lenB = pos + b.size;
+  function findDiff(a, b2, pos, preferredPos, preferredSide) {
+    let start = a.findDiffStart(b2, pos), lenA = pos + a.size, lenB = pos + b2.size;
     if (start == null)
       return null;
-    let { a: endA, b: endB } = a.findDiffEnd(b, lenA, lenB);
+    let { a: endA, b: endB } = a.findDiffEnd(b2, lenA, lenB);
     if (preferredSide == "end") {
       let adjust = Math.max(0, start - Math.min(endA, endB));
       preferredPos -= endA + adjust - start;
@@ -11368,14 +11368,14 @@ var AshokanBundle = (() => {
     view2.someProp("markViews", add);
     return result;
   }
-  function changedNodeViews(a, b) {
+  function changedNodeViews(a, b2) {
     let nA = 0, nB = 0;
     for (let prop in a) {
-      if (a[prop] != b[prop])
+      if (a[prop] != b2[prop])
         return true;
       nA++;
     }
-    for (let _ in b)
+    for (let _2 in b2)
       nB++;
     return nA != nB;
   }
@@ -11581,8 +11581,8 @@ var AshokanBundle = (() => {
         return null;
       let end = this.items.length;
       for (; ; end--) {
-        let next = this.items.get(end - 1);
-        if (next.selection) {
+        let next2 = this.items.get(end - 1);
+        if (next2.selection) {
           --end;
           break;
         }
@@ -12340,18 +12340,18 @@ var AshokanBundle = (() => {
         return false;
       let types = [];
       let splitDepth, deflt, atEnd = false, atStart = false;
-      for (let d = $from.depth; ; d--) {
-        let node = $from.node(d);
+      for (let d2 = $from.depth; ; d2--) {
+        let node = $from.node(d2);
         if (node.isBlock) {
-          atEnd = $from.end(d) == $from.pos + ($from.depth - d);
-          atStart = $from.start(d) == $from.pos - ($from.depth - d);
-          deflt = defaultBlockAt($from.node(d - 1).contentMatchAt($from.indexAfter(d - 1)));
+          atEnd = $from.end(d2) == $from.pos + ($from.depth - d2);
+          atStart = $from.start(d2) == $from.pos - ($from.depth - d2);
+          deflt = defaultBlockAt($from.node(d2 - 1).contentMatchAt($from.indexAfter(d2 - 1)));
           let splitType = splitNode && splitNode($to.parent, atEnd, $from);
           types.unshift(splitType || (atEnd && deflt ? { type: deflt } : null));
-          splitDepth = d;
+          splitDepth = d2;
           break;
         } else {
-          if (d == 1)
+          if (d2 == 1)
             return false;
           types.unshift(null);
         }
@@ -12695,8 +12695,8 @@ var AshokanBundle = (() => {
         if (dispatch) {
           let wrap2 = Fragment.empty;
           let depthBefore = $from.index(-1) ? 1 : $from.index(-2) ? 2 : 3;
-          for (let d = $from.depth - depthBefore; d >= $from.depth - 3; d--)
-            wrap2 = Fragment.from($from.node(d).copy(wrap2));
+          for (let d2 = $from.depth - depthBefore; d2 >= $from.depth - 3; d2--)
+            wrap2 = Fragment.from($from.node(d2).copy(wrap2));
           let depthAfter = $from.indexAfter(-1) < $from.node(-2).childCount ? 1 : $from.indexAfter(-2) < $from.node(-3).childCount ? 2 : 3;
           wrap2 = wrap2.append(Fragment.from(itemType.createAndFill()));
           let start = $from.before($from.depth - (depthBefore - 1));
@@ -12839,7 +12839,7 @@ var AshokanBundle = (() => {
     };
   }
   var MAX_MATCH = 500;
-  function inputRules({ rules }) {
+  function inputRules({ rules: rules3 }) {
     let plugin = new Plugin({
       state: {
         init() {
@@ -12854,14 +12854,14 @@ var AshokanBundle = (() => {
       },
       props: {
         handleTextInput(view2, from2, to, text) {
-          return run(view2, from2, to, text, rules, plugin);
+          return run(view2, from2, to, text, rules3, plugin);
         },
         handleDOMEvents: {
           compositionend: (view2) => {
             setTimeout(() => {
               let { $cursor } = view2.state.selection;
               if ($cursor)
-                run(view2, $cursor.pos, $cursor.pos, "", rules, plugin);
+                run(view2, $cursor.pos, $cursor.pos, "", rules3, plugin);
             });
           }
         }
@@ -12870,14 +12870,14 @@ var AshokanBundle = (() => {
     });
     return plugin;
   }
-  function run(view2, from2, to, text, rules, plugin) {
+  function run(view2, from2, to, text, rules3, plugin) {
     if (view2.composing)
       return false;
     let state = view2.state, $from = state.doc.resolve(from2);
     let textBefore = $from.parent.textBetween(Math.max(0, $from.parentOffset - MAX_MATCH), $from.parentOffset, null, "\uFFFC") + text;
-    for (let i = 0; i < rules.length; i++) {
-      let rule = rules[i];
-      if (!rule.inCodeMark && $from.marks().some((m) => m.type.spec.code))
+    for (let i = 0; i < rules3.length; i++) {
+      let rule = rules3[i];
+      if (!rule.inCodeMark && $from.marks().some((m2) => m2.type.spec.code))
         continue;
       if ($from.parent.type.spec.code) {
         if (!rule.inCode)
@@ -12892,7 +12892,7 @@ var AshokanBundle = (() => {
       if (!rule.inCodeMark) {
         let hasMark = false;
         state.doc.nodesBetween(startPos, $from.pos, (node) => {
-          if (node.isInline && node.marks.some((m) => m.type.spec.code))
+          if (node.isInline && node.marks.some((m2) => m2.type.spec.code))
             hasMark = true;
         });
         if (hasMark)
@@ -12994,10 +12994,10 @@ var AshokanBundle = (() => {
     }
     updateOverlay() {
       let $pos = this.editorView.state.doc.resolve(this.cursorPos);
-      let isBlock = !$pos.parent.inlineContent, rect;
+      let isBlock2 = !$pos.parent.inlineContent, rect;
       let editorDOM = this.editorView.dom, editorRect = editorDOM.getBoundingClientRect();
       let scaleX = editorRect.width / editorDOM.offsetWidth, scaleY = editorRect.height / editorDOM.offsetHeight;
-      if (isBlock) {
+      if (isBlock2) {
         let before = $pos.nodeBefore, after = $pos.nodeAfter;
         if (before || after) {
           let node = this.editorView.nodeDOM(this.cursorPos - (before ? before.nodeSize : 0));
@@ -13026,8 +13026,8 @@ var AshokanBundle = (() => {
           this.element.style.backgroundColor = this.color;
         }
       }
-      this.element.classList.toggle("prosemirror-dropcursor-block", isBlock);
-      this.element.classList.toggle("prosemirror-dropcursor-inline", !isBlock);
+      this.element.classList.toggle("prosemirror-dropcursor-block", isBlock2);
+      this.element.classList.toggle("prosemirror-dropcursor-inline", !isBlock2);
       let parentLeft, parentTop;
       if (!parent || parent == document.body && getComputedStyle(parent).position == "static") {
         parentLeft = -pageXOffset;
@@ -13139,13 +13139,13 @@ var AshokanBundle = (() => {
       search: for (; ; ) {
         if (!mustMove && _GapCursor.valid($pos))
           return $pos;
-        let pos = $pos.pos, next = null;
-        for (let d = $pos.depth; ; d--) {
-          let parent = $pos.node(d);
-          if (dir > 0 ? $pos.indexAfter(d) < parent.childCount : $pos.index(d) > 0) {
-            next = parent.child(dir > 0 ? $pos.indexAfter(d) : $pos.index(d) - 1);
+        let pos = $pos.pos, next2 = null;
+        for (let d2 = $pos.depth; ; d2--) {
+          let parent = $pos.node(d2);
+          if (dir > 0 ? $pos.indexAfter(d2) < parent.childCount : $pos.index(d2) > 0) {
+            next2 = parent.child(dir > 0 ? $pos.indexAfter(d2) : $pos.index(d2) - 1);
             break;
-          } else if (d == 0) {
+          } else if (d2 == 0) {
             return null;
           }
           pos += dir;
@@ -13154,16 +13154,16 @@ var AshokanBundle = (() => {
             return $cur;
         }
         for (; ; ) {
-          let inside = dir > 0 ? next.firstChild : next.lastChild;
+          let inside = dir > 0 ? next2.firstChild : next2.lastChild;
           if (!inside) {
-            if (next.isAtom && !next.isText && !NodeSelection.isSelectable(next)) {
-              $pos = $pos.doc.resolve(pos + next.nodeSize * dir);
+            if (next2.isAtom && !next2.isText && !NodeSelection.isSelectable(next2)) {
+              $pos = $pos.doc.resolve(pos + next2.nodeSize * dir);
               mustMove = false;
               continue search;
             }
             break;
           }
-          next = inside;
+          next2 = inside;
           pos += dir;
           let $cur = $pos.doc.resolve(pos);
           if (_GapCursor.valid($cur))
@@ -13192,8 +13192,8 @@ var AshokanBundle = (() => {
     return type.isAtom || type.spec.isolating || type.spec.createGapCursor;
   }
   function closedBefore($pos) {
-    for (let d = $pos.depth; d >= 0; d--) {
-      let index = $pos.index(d), parent = $pos.node(d);
+    for (let d2 = $pos.depth; d2 >= 0; d2--) {
+      let index = $pos.index(d2), parent = $pos.node(d2);
       if (index == 0) {
         if (parent.type.spec.isolating)
           return true;
@@ -13209,8 +13209,8 @@ var AshokanBundle = (() => {
     return true;
   }
   function closedAfter($pos) {
-    for (let d = $pos.depth; d >= 0; d--) {
-      let index = $pos.indexAfter(d), parent = $pos.node(d);
+    for (let d2 = $pos.depth; d2 >= 0; d2--) {
+      let index = $pos.indexAfter(d2), parent = $pos.node(d2);
       if (index == parent.childCount) {
         if (parent.type.spec.isolating)
           return true;
@@ -13298,6 +13298,2013 @@ var AshokanBundle = (() => {
     return DecorationSet.create(state.doc, [Decoration.widget(state.selection.head, node, { key: "gapcursor" })]);
   }
 
+  // node_modules/marked/lib/marked.esm.js
+  function M() {
+    return { async: false, breaks: false, extensions: null, gfm: true, hooks: null, pedantic: false, renderer: null, silent: false, tokenizer: null, walkTokens: null };
+  }
+  var T = M();
+  function N(l3) {
+    T = l3;
+  }
+  var _ = { exec: () => null };
+  function E(l3) {
+    let e = [];
+    return (t) => {
+      let n = Math.max(0, Math.min(3, t - 1)), s = e[n];
+      return s || (s = l3(n), e[n] = s), s;
+    };
+  }
+  function d(l3, e = "") {
+    let t = typeof l3 == "string" ? l3 : l3.source, n = { replace: (s, r) => {
+      let i = typeof r == "string" ? r : r.source;
+      return i = i.replace(m.caret, "$1"), t = t.replace(s, i), n;
+    }, getRegex: () => new RegExp(t, e) };
+    return n;
+  }
+  var Te = ((l3 = "") => {
+    try {
+      return !!new RegExp("(?<=1)(?<!1)" + l3);
+    } catch {
+      return false;
+    }
+  })();
+  var m = { codeRemoveIndent: /^(?: {1,4}| {0,3}\t)/gm, outputLinkReplace: /\\([\[\]])/g, indentCodeCompensation: /^(\s+)(?:```)/, beginningSpace: /^\s+/, endingHash: /#$/, startingSpaceChar: /^ /, endingSpaceChar: / $/, nonSpaceChar: /[^ ]/, newLineCharGlobal: /\n/g, tabCharGlobal: /\t/g, multipleSpaceGlobal: /\s+/g, blankLine: /^[ \t]*$/, doubleBlankLine: /\n[ \t]*\n[ \t]*$/, blockquoteStart: /^ {0,3}>/, blockquoteSetextReplace: /\n {0,3}((?:=+|-+) *)(?=\n|$)/g, blockquoteSetextReplace2: /^ {0,3}>[ \t]?/gm, listReplaceNesting: /^ {1,4}(?=( {4})*[^ ])/g, listIsTask: /^\[[ xX]\] +\S/, listReplaceTask: /^\[[ xX]\] +/, listTaskCheckbox: /\[[ xX]\]/, anyLine: /\n.*\n/, hrefBrackets: /^<(.*)>$/, tableDelimiter: /[:|]/, tableAlignChars: /^\||\| *$/g, tableRowBlankLine: /\n[ \t]*$/, tableAlignRight: /^ *-+: *$/, tableAlignCenter: /^ *:-+: *$/, tableAlignLeft: /^ *:-+ *$/, startATag: /^<a /i, endATag: /^<\/a>/i, startPreScriptTag: /^<(pre|code|kbd|script)(\s|>)/i, endPreScriptTag: /^<\/(pre|code|kbd|script)(\s|>)/i, startAngleBracket: /^</, endAngleBracket: />$/, pedanticHrefTitle: /^([^'"]*[^\s])\s+(['"])(.*)\2/, unicodeAlphaNumeric: /[\p{L}\p{N}]/u, escapeTest: /[&<>"']/, escapeReplace: /[&<>"']/g, escapeTestNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/, escapeReplaceNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g, caret: /(^|[^\[])\^/g, percentDecode: /%25/g, findPipe: /\|/g, splitPipe: / \|/, slashPipe: /\\\|/g, carriageReturn: /\r\n|\r/g, spaceLine: /^ +$/gm, notSpaceStart: /^\S*/, endingNewline: /\n$/, listItemRegex: (l3) => new RegExp(`^( {0,3}${l3})((?:[	 ][^\\n]*)?(?:\\n|$))`), nextBulletRegex: E((l3) => new RegExp(`^ {0,${l3}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`)), hrRegex: E((l3) => new RegExp(`^ {0,${l3}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`)), fencesBeginRegex: E((l3) => new RegExp(`^ {0,${l3}}(?:\`\`\`|~~~)`)), headingBeginRegex: E((l3) => new RegExp(`^ {0,${l3}}#`)), htmlBeginRegex: E((l3) => new RegExp(`^ {0,${l3}}<(?:[a-z].*>|!--)`, "i")), blockquoteBeginRegex: E((l3) => new RegExp(`^ {0,${l3}}>`)) };
+  var Oe = /^(?:[ \t]*(?:\n|$))+/;
+  var we = /^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/;
+  var ye = /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/;
+  var B = /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/;
+  var Pe = /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/;
+  var j = / {0,3}(?:[*+-]|\d{1,9}[.)])/;
+  var oe = /^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/;
+  var ae = d(oe).replace(/bull/g, j).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/\|table/g, "").getRegex();
+  var Se = d(oe).replace(/bull/g, j).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/table/g, / {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex();
+  var F = /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/;
+  var $e = /^[^\n]+/;
+  var U = /(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+/;
+  var Le = d(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label", U).replace("title", /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex();
+  var _e = d(/^(bull)([ \t][^\n]*?)?(?:\n|$)/).replace(/bull/g, j).getRegex();
+  var H = "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul";
+  var K = /<!--(?:-?>|[\s\S]*?(?:-->|$))/;
+  var ze = d("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))", "i").replace("comment", K).replace("tag", H).replace("attribute", / +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex();
+  var le = d(F).replace("hr", B).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("|table", "").replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)])[ \\t]+[^ \\t\\n]").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", H).getRegex();
+  var Me = d(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph", le).getRegex();
+  var W = { blockquote: Me, code: we, def: Le, fences: ye, heading: Pe, hr: B, html: ze, lheading: ae, list: _e, newline: Oe, paragraph: le, table: _, text: $e };
+  var se = d("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr", B).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("blockquote", " {0,3}>").replace("code", "(?: {4}| {0,3}	)[^\\n]").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)])[ \\t]").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", H).getRegex();
+  var Ee = { ...W, lheading: Se, table: se, paragraph: d(F).replace("hr", B).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("table", se).replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)])[ \\t]+[^ \\t\\n]").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", H).getRegex() };
+  var Ie = { ...W, html: d(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment", K).replace(/tag/g, "(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(), def: /^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/, heading: /^(#{1,6})(.*)(?:\n+|$)/, fences: _, lheading: /^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/, paragraph: d(F).replace("hr", B).replace("heading", ` *#{1,6} *[^
+]`).replace("lheading", ae).replace("|table", "").replace("blockquote", " {0,3}>").replace("|fences", "").replace("|list", "").replace("|html", "").replace("|tag", "").getRegex() };
+  var Ae = /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/;
+  var Ce = /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/;
+  var ue = /^( {2,}|\\)\n(?!\s*$)/;
+  var Be = /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/;
+  var I = /[\p{P}\p{S}]/u;
+  var Z = /[\s\p{P}\p{S}]/u;
+  var X = /[^\s\p{P}\p{S}]/u;
+  var De = d(/^((?![*_])punctSpace)/, "u").replace(/punctSpace/g, Z).getRegex();
+  var pe = /(?!~)[\p{P}\p{S}]/u;
+  var qe = /(?!~)[\s\p{P}\p{S}]/u;
+  var ve = /(?:[^\s\p{P}\p{S}]|~)/u;
+  var He = d(/link|precode-code|html/, "g").replace("link", /\[(?:[^\[\]`]|(?<a>`+)[^`]+\k<a>(?!`))*?\]\((?:\\[\s\S]|[^\\\(\)]|\((?:\\[\s\S]|[^\\\(\)])*\))*\)/).replace("precode-", Te ? "(?<!`)()" : "(^^|[^`])").replace("code", /(?<b>`+)[^`]+\k<b>(?!`)/).replace("html", /<(?! )[^<>]*?>/).getRegex();
+  var ce = /^(?:\*+(?:((?!\*)punct)|([^\s*]))?)|^_+(?:((?!_)punct)|([^\s_]))?/;
+  var Ze = d(ce, "u").replace(/punct/g, I).getRegex();
+  var Ge = d(ce, "u").replace(/punct/g, pe).getRegex();
+  var he = "^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)";
+  var Ne = d(he, "gu").replace(/notPunctSpace/g, X).replace(/punctSpace/g, Z).replace(/punct/g, I).getRegex();
+  var Qe = d(he, "gu").replace(/notPunctSpace/g, ve).replace(/punctSpace/g, qe).replace(/punct/g, pe).getRegex();
+  var je = d("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)", "gu").replace(/notPunctSpace/g, X).replace(/punctSpace/g, Z).replace(/punct/g, I).getRegex();
+  var Fe = d(/^~~?(?:((?!~)punct)|[^\s~])/, "u").replace(/punct/g, I).getRegex();
+  var Ue = "^[^~]+(?=[^~])|(?!~)punct(~~?)(?=[\\s]|$)|notPunctSpace(~~?)(?!~)(?=punctSpace|$)|(?!~)punctSpace(~~?)(?=notPunctSpace)|[\\s](~~?)(?!~)(?=punct)|(?!~)punct(~~?)(?!~)(?=punct)|notPunctSpace(~~?)(?=notPunctSpace)";
+  var Ke = d(Ue, "gu").replace(/notPunctSpace/g, X).replace(/punctSpace/g, Z).replace(/punct/g, I).getRegex();
+  var We = d(/\\(punct)/, "gu").replace(/punct/g, I).getRegex();
+  var Xe = d(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme", /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email", /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex();
+  var Je = d(K).replace("(?:-->|$)", "-->").getRegex();
+  var Ve = d("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment", Je).replace("attribute", /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex();
+  var v = /(?:\[(?:\\[\s\S]|[^\[\]\\])*\]|\\[\s\S]|`+(?!`)[^`]*?`+(?!`)|``+(?=\])|[^\[\]\\`])*?/;
+  var Ye = d(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]+(?:\n[ \t]*)?|\n[ \t]*)(title))?\s*\)/).replace("label", v).replace("href", /<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title", /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex();
+  var ke = d(/^!?\[(label)\]\[(ref)\]/).replace("label", v).replace("ref", U).getRegex();
+  var de = d(/^!?\[(ref)\](?:\[\])?/).replace("ref", U).getRegex();
+  var et = d("reflink|nolink(?!\\()", "g").replace("reflink", ke).replace("nolink", de).getRegex();
+  var ie3 = /[hH][tT][tT][pP][sS]?|[fF][tT][pP]/;
+  var J = { _backpedal: _, anyPunctuation: We, autolink: Xe, blockSkip: He, br: ue, code: Ce, del: _, delLDelim: _, delRDelim: _, emStrongLDelim: Ze, emStrongRDelimAst: Ne, emStrongRDelimUnd: je, escape: Ae, link: Ye, nolink: de, punctuation: De, reflink: ke, reflinkSearch: et, tag: Ve, text: Be, url: _ };
+  var tt = { ...J, link: d(/^!?\[(label)\]\((.*?)\)/).replace("label", v).getRegex(), reflink: d(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label", v).getRegex() };
+  var Q = { ...J, emStrongRDelimAst: Qe, emStrongLDelim: Ge, delLDelim: Fe, delRDelim: Ke, url: d(/^((?:protocol):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/).replace("protocol", ie3).replace("email", /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(), _backpedal: /(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/, del: /^(~~?)(?=[^\s~])((?:\\[\s\S]|[^\\])*?(?:\\[\s\S]|[^\s~\\]))\1(?=[^~]|$)/, text: d(/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|protocol:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/).replace("protocol", ie3).getRegex() };
+  var nt = { ...Q, br: d(ue).replace("{2,}", "*").getRegex(), text: d(Q.text).replace("\\b_", "\\b_| {2,}\\n").replace(/\{2,\}/g, "*").getRegex() };
+  var D = { normal: W, gfm: Ee, pedantic: Ie };
+  var A = { normal: J, gfm: Q, breaks: nt, pedantic: tt };
+  var rt = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  var ge = (l3) => rt[l3];
+  function O(l3, e) {
+    if (e) {
+      if (m.escapeTest.test(l3)) return l3.replace(m.escapeReplace, ge);
+    } else if (m.escapeTestNoEncode.test(l3)) return l3.replace(m.escapeReplaceNoEncode, ge);
+    return l3;
+  }
+  function V(l3) {
+    try {
+      l3 = encodeURI(l3).replace(m.percentDecode, "%");
+    } catch {
+      return null;
+    }
+    return l3;
+  }
+  function Y(l3, e) {
+    let t = l3.replace(m.findPipe, (r, i, o) => {
+      let u = false, a = i;
+      for (; --a >= 0 && o[a] === "\\"; ) u = !u;
+      return u ? "|" : " |";
+    }), n = t.split(m.splitPipe), s = 0;
+    if (n[0].trim() || n.shift(), n.length > 0 && !n.at(-1)?.trim() && n.pop(), e) if (n.length > e) n.splice(e);
+    else for (; n.length < e; ) n.push("");
+    for (; s < n.length; s++) n[s] = n[s].trim().replace(m.slashPipe, "|");
+    return n;
+  }
+  function $(l3, e, t) {
+    let n = l3.length;
+    if (n === 0) return "";
+    let s = 0;
+    for (; s < n; ) {
+      let r = l3.charAt(n - s - 1);
+      if (r === e && !t) s++;
+      else if (r !== e && t) s++;
+      else break;
+    }
+    return l3.slice(0, n - s);
+  }
+  function ee(l3) {
+    let e = l3.split(`
+`), t = e.length - 1;
+    for (; t >= 0 && m.blankLine.test(e[t]); ) t--;
+    return e.length - t <= 2 ? l3 : e.slice(0, t + 1).join(`
+`);
+  }
+  function fe(l3, e) {
+    if (l3.indexOf(e[1]) === -1) return -1;
+    let t = 0;
+    for (let n = 0; n < l3.length; n++) if (l3[n] === "\\") n++;
+    else if (l3[n] === e[0]) t++;
+    else if (l3[n] === e[1] && (t--, t < 0)) return n;
+    return t > 0 ? -2 : -1;
+  }
+  function me(l3, e = 0) {
+    let t = e, n = "";
+    for (let s of l3) if (s === "	") {
+      let r = 4 - t % 4;
+      n += " ".repeat(r), t += r;
+    } else n += s, t++;
+    return n;
+  }
+  function xe(l3, e, t, n, s) {
+    let r = e.href, i = e.title || null, o = l3[1].replace(s.other.outputLinkReplace, "$1");
+    n.state.inLink = true;
+    let u = { type: l3[0].charAt(0) === "!" ? "image" : "link", raw: t, href: r, title: i, text: o, tokens: n.inlineTokens(o) };
+    return n.state.inLink = false, u;
+  }
+  function st(l3, e, t) {
+    let n = l3.match(t.other.indentCodeCompensation);
+    if (n === null) return e;
+    let s = n[1];
+    return e.split(`
+`).map((r) => {
+      let i = r.match(t.other.beginningSpace);
+      if (i === null) return r;
+      let [o] = i;
+      return o.length >= s.length ? r.slice(s.length) : r;
+    }).join(`
+`);
+  }
+  var w = class {
+    options;
+    rules;
+    lexer;
+    constructor(e) {
+      this.options = e || T;
+    }
+    space(e) {
+      let t = this.rules.block.newline.exec(e);
+      if (t && t[0].length > 0) return { type: "space", raw: t[0] };
+    }
+    code(e) {
+      let t = this.rules.block.code.exec(e);
+      if (t) {
+        let n = this.options.pedantic ? t[0] : ee(t[0]), s = n.replace(this.rules.other.codeRemoveIndent, "");
+        return { type: "code", raw: n, codeBlockStyle: "indented", text: s };
+      }
+    }
+    fences(e) {
+      let t = this.rules.block.fences.exec(e);
+      if (t) {
+        let n = t[0], s = st(n, t[3] || "", this.rules);
+        return { type: "code", raw: n, lang: t[2] ? t[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : t[2], text: s };
+      }
+    }
+    heading(e) {
+      let t = this.rules.block.heading.exec(e);
+      if (t) {
+        let n = t[2].trim();
+        if (this.rules.other.endingHash.test(n)) {
+          let s = $(n, "#");
+          (this.options.pedantic || !s || this.rules.other.endingSpaceChar.test(s)) && (n = s.trim());
+        }
+        return { type: "heading", raw: $(t[0], `
+`), depth: t[1].length, text: n, tokens: this.lexer.inline(n) };
+      }
+    }
+    hr(e) {
+      let t = this.rules.block.hr.exec(e);
+      if (t) return { type: "hr", raw: $(t[0], `
+`) };
+    }
+    blockquote(e) {
+      let t = this.rules.block.blockquote.exec(e);
+      if (t) {
+        let n = $(t[0], `
+`).split(`
+`), s = "", r = "", i = [];
+        for (; n.length > 0; ) {
+          let o = false, u = [], a;
+          for (a = 0; a < n.length; a++) if (this.rules.other.blockquoteStart.test(n[a])) u.push(n[a]), o = true;
+          else if (!o) u.push(n[a]);
+          else break;
+          n = n.slice(a);
+          let c = u.join(`
+`), p = c.replace(this.rules.other.blockquoteSetextReplace, `
+    $1`).replace(this.rules.other.blockquoteSetextReplace2, "");
+          s = s ? `${s}
+${c}` : c, r = r ? `${r}
+${p}` : p;
+          let k = this.lexer.state.top;
+          if (this.lexer.state.top = true, this.lexer.blockTokens(p, i, true), this.lexer.state.top = k, n.length === 0) break;
+          let h = i.at(-1);
+          if (h?.type === "code") break;
+          if (h?.type === "blockquote") {
+            let R = h, f = R.raw + `
+` + n.join(`
+`), S = this.blockquote(f);
+            i[i.length - 1] = S, s = s.substring(0, s.length - R.raw.length) + S.raw, r = r.substring(0, r.length - R.text.length) + S.text;
+            break;
+          } else if (h?.type === "list") {
+            let R = h, f = R.raw + `
+` + n.join(`
+`), S = this.list(f);
+            i[i.length - 1] = S, s = s.substring(0, s.length - h.raw.length) + S.raw, r = r.substring(0, r.length - R.raw.length) + S.raw, n = f.substring(i.at(-1).raw.length).split(`
+`);
+            continue;
+          }
+        }
+        return { type: "blockquote", raw: s, tokens: i, text: r };
+      }
+    }
+    list(e) {
+      let t = this.rules.block.list.exec(e);
+      if (t) {
+        let n = t[1].trim(), s = n.length > 1, r = { type: "list", raw: "", ordered: s, start: s ? +n.slice(0, -1) : "", loose: false, items: [] };
+        n = s ? `\\d{1,9}\\${n.slice(-1)}` : `\\${n}`, this.options.pedantic && (n = s ? n : "[*+-]");
+        let i = this.rules.other.listItemRegex(n), o = false;
+        for (; e; ) {
+          let a = false, c = "", p = "";
+          if (!(t = i.exec(e)) || this.rules.block.hr.test(e)) break;
+          c = t[0], e = e.substring(c.length);
+          let k = me(t[2].split(`
+`, 1)[0], t[1].length), h = e.split(`
+`, 1)[0], R = !k.trim(), f = 0;
+          if (this.options.pedantic ? (f = 2, p = k.trimStart()) : R ? f = t[1].length + 1 : (f = k.search(this.rules.other.nonSpaceChar), f = f > 4 ? 1 : f, p = k.slice(f), f += t[1].length), R && this.rules.other.blankLine.test(h) && (c += h + `
+`, e = e.substring(h.length + 1), a = true), !a) {
+            let S = this.rules.other.nextBulletRegex(f), te = this.rules.other.hrRegex(f), ne = this.rules.other.fencesBeginRegex(f), re = this.rules.other.headingBeginRegex(f), be = this.rules.other.htmlBeginRegex(f), Re = this.rules.other.blockquoteBeginRegex(f);
+            for (; e; ) {
+              let G = e.split(`
+`, 1)[0], C;
+              if (h = G, this.options.pedantic ? (h = h.replace(this.rules.other.listReplaceNesting, "  "), C = h) : C = h.replace(this.rules.other.tabCharGlobal, "    "), ne.test(h) || re.test(h) || be.test(h) || Re.test(h) || S.test(h) || te.test(h)) break;
+              if (C.search(this.rules.other.nonSpaceChar) >= f || !h.trim()) p += `
+` + C.slice(f);
+              else {
+                if (R || k.replace(this.rules.other.tabCharGlobal, "    ").search(this.rules.other.nonSpaceChar) >= 4 || ne.test(k) || re.test(k) || te.test(k)) break;
+                p += `
+` + h;
+              }
+              R = !h.trim(), c += G + `
+`, e = e.substring(G.length + 1), k = C.slice(f);
+            }
+          }
+          r.loose || (o ? r.loose = true : this.rules.other.doubleBlankLine.test(c) && (o = true)), r.items.push({ type: "list_item", raw: c, task: !!this.options.gfm && this.rules.other.listIsTask.test(p), loose: false, text: p, tokens: [] }), r.raw += c;
+        }
+        let u = r.items.at(-1);
+        if (u) u.raw = u.raw.trimEnd(), u.text = u.text.trimEnd();
+        else return;
+        r.raw = r.raw.trimEnd();
+        for (let a of r.items) {
+          this.lexer.state.top = false, a.tokens = this.lexer.blockTokens(a.text, []);
+          let c = a.tokens[0];
+          if (a.task && (c?.type === "text" || c?.type === "paragraph")) {
+            a.text = a.text.replace(this.rules.other.listReplaceTask, ""), c.raw = c.raw.replace(this.rules.other.listReplaceTask, ""), c.text = c.text.replace(this.rules.other.listReplaceTask, "");
+            for (let k = this.lexer.inlineQueue.length - 1; k >= 0; k--) if (this.rules.other.listIsTask.test(this.lexer.inlineQueue[k].src)) {
+              this.lexer.inlineQueue[k].src = this.lexer.inlineQueue[k].src.replace(this.rules.other.listReplaceTask, "");
+              break;
+            }
+            let p = this.rules.other.listTaskCheckbox.exec(a.raw);
+            if (p) {
+              let k = { type: "checkbox", raw: p[0] + " ", checked: p[0] !== "[ ]" };
+              a.checked = k.checked, r.loose ? a.tokens[0] && ["paragraph", "text"].includes(a.tokens[0].type) && "tokens" in a.tokens[0] && a.tokens[0].tokens ? (a.tokens[0].raw = k.raw + a.tokens[0].raw, a.tokens[0].text = k.raw + a.tokens[0].text, a.tokens[0].tokens.unshift(k)) : a.tokens.unshift({ type: "paragraph", raw: k.raw, text: k.raw, tokens: [k] }) : a.tokens.unshift(k);
+            }
+          } else a.task && (a.task = false);
+          if (!r.loose) {
+            let p = a.tokens.filter((h) => h.type === "space"), k = p.length > 0 && p.some((h) => this.rules.other.anyLine.test(h.raw));
+            r.loose = k;
+          }
+        }
+        if (r.loose) for (let a of r.items) {
+          a.loose = true;
+          for (let c of a.tokens) c.type === "text" && (c.type = "paragraph");
+        }
+        return r;
+      }
+    }
+    html(e) {
+      let t = this.rules.block.html.exec(e);
+      if (t) {
+        let n = ee(t[0]);
+        return { type: "html", block: true, raw: n, pre: t[1] === "pre" || t[1] === "script" || t[1] === "style", text: n };
+      }
+    }
+    def(e) {
+      let t = this.rules.block.def.exec(e);
+      if (t) {
+        let n = t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " "), s = t[2] ? t[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "", r = t[3] ? t[3].substring(1, t[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : t[3];
+        return { type: "def", tag: n, raw: $(t[0], `
+`), href: s, title: r };
+      }
+    }
+    table(e) {
+      let t = this.rules.block.table.exec(e);
+      if (!t || !this.rules.other.tableDelimiter.test(t[2])) return;
+      let n = Y(t[1]), s = t[2].replace(this.rules.other.tableAlignChars, "").split("|"), r = t[3]?.trim() ? t[3].replace(this.rules.other.tableRowBlankLine, "").split(`
+`) : [], i = { type: "table", raw: $(t[0], `
+`), header: [], align: [], rows: [] };
+      if (n.length === s.length) {
+        for (let o of s) this.rules.other.tableAlignRight.test(o) ? i.align.push("right") : this.rules.other.tableAlignCenter.test(o) ? i.align.push("center") : this.rules.other.tableAlignLeft.test(o) ? i.align.push("left") : i.align.push(null);
+        for (let o = 0; o < n.length; o++) i.header.push({ text: n[o], tokens: this.lexer.inline(n[o]), header: true, align: i.align[o] });
+        for (let o of r) i.rows.push(Y(o, i.header.length).map((u, a) => ({ text: u, tokens: this.lexer.inline(u), header: false, align: i.align[a] })));
+        return i;
+      }
+    }
+    lheading(e) {
+      let t = this.rules.block.lheading.exec(e);
+      if (t) {
+        let n = t[1].trim();
+        return { type: "heading", raw: $(t[0], `
+`), depth: t[2].charAt(0) === "=" ? 1 : 2, text: n, tokens: this.lexer.inline(n) };
+      }
+    }
+    paragraph(e) {
+      let t = this.rules.block.paragraph.exec(e);
+      if (t) {
+        let n = t[1].charAt(t[1].length - 1) === `
+` ? t[1].slice(0, -1) : t[1];
+        return { type: "paragraph", raw: t[0], text: n, tokens: this.lexer.inline(n) };
+      }
+    }
+    text(e) {
+      let t = this.rules.block.text.exec(e);
+      if (t) return { type: "text", raw: t[0], text: t[0], tokens: this.lexer.inline(t[0]) };
+    }
+    escape(e) {
+      let t = this.rules.inline.escape.exec(e);
+      if (t) return { type: "escape", raw: t[0], text: t[1] };
+    }
+    tag(e) {
+      let t = this.rules.inline.tag.exec(e);
+      if (t) return !this.lexer.state.inLink && this.rules.other.startATag.test(t[0]) ? this.lexer.state.inLink = true : this.lexer.state.inLink && this.rules.other.endATag.test(t[0]) && (this.lexer.state.inLink = false), !this.lexer.state.inRawBlock && this.rules.other.startPreScriptTag.test(t[0]) ? this.lexer.state.inRawBlock = true : this.lexer.state.inRawBlock && this.rules.other.endPreScriptTag.test(t[0]) && (this.lexer.state.inRawBlock = false), { type: "html", raw: t[0], inLink: this.lexer.state.inLink, inRawBlock: this.lexer.state.inRawBlock, block: false, text: t[0] };
+    }
+    link(e) {
+      let t = this.rules.inline.link.exec(e);
+      if (t) {
+        let n = t[2].trim();
+        if (!this.options.pedantic && this.rules.other.startAngleBracket.test(n)) {
+          if (!this.rules.other.endAngleBracket.test(n)) return;
+          let i = $(n.slice(0, -1), "\\");
+          if ((n.length - i.length) % 2 === 0) return;
+        } else {
+          let i = fe(t[2], "()");
+          if (i === -2) return;
+          if (i > -1) {
+            let u = (t[0].indexOf("!") === 0 ? 5 : 4) + t[1].length + i;
+            t[2] = t[2].substring(0, i), t[0] = t[0].substring(0, u).trim(), t[3] = "";
+          }
+        }
+        let s = t[2], r = "";
+        if (this.options.pedantic) {
+          let i = this.rules.other.pedanticHrefTitle.exec(s);
+          i && (s = i[1], r = i[3]);
+        } else r = t[3] ? t[3].slice(1, -1) : "";
+        return s = s.trim(), this.rules.other.startAngleBracket.test(s) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(n) ? s = s.slice(1) : s = s.slice(1, -1)), xe(t, { href: s && s.replace(this.rules.inline.anyPunctuation, "$1"), title: r && r.replace(this.rules.inline.anyPunctuation, "$1") }, t[0], this.lexer, this.rules);
+      }
+    }
+    reflink(e, t) {
+      let n;
+      if ((n = this.rules.inline.reflink.exec(e)) || (n = this.rules.inline.nolink.exec(e))) {
+        let s = (n[2] || n[1]).replace(this.rules.other.multipleSpaceGlobal, " "), r = t[s.toLowerCase()];
+        if (!r) {
+          let i = n[0].charAt(0);
+          return { type: "text", raw: i, text: i };
+        }
+        return xe(n, r, n[0], this.lexer, this.rules);
+      }
+    }
+    emStrong(e, t, n = "") {
+      let s = this.rules.inline.emStrongLDelim.exec(e);
+      if (!s || !s[1] && !s[2] && !s[3] && !s[4] || s[4] && n.match(this.rules.other.unicodeAlphaNumeric)) return;
+      if (!(s[1] || s[3] || "") || !n || this.rules.inline.punctuation.exec(n)) {
+        let i = [...s[0]].length - 1, o, u, a = i, c = 0, p = s[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
+        for (p.lastIndex = 0, t = t.slice(-1 * e.length + i); (s = p.exec(t)) !== null; ) {
+          if (o = s[1] || s[2] || s[3] || s[4] || s[5] || s[6], !o) continue;
+          if (u = [...o].length, s[3] || s[4]) {
+            a += u;
+            continue;
+          } else if ((s[5] || s[6]) && i % 3 && !((i + u) % 3)) {
+            c += u;
+            continue;
+          }
+          if (a -= u, a > 0) continue;
+          u = Math.min(u, u + a + c);
+          let k = [...s[0]][0].length, h = e.slice(0, i + s.index + k + u);
+          if (Math.min(i, u) % 2) {
+            let f = h.slice(1, -1);
+            return { type: "em", raw: h, text: f, tokens: this.lexer.inlineTokens(f) };
+          }
+          let R = h.slice(2, -2);
+          return { type: "strong", raw: h, text: R, tokens: this.lexer.inlineTokens(R) };
+        }
+      }
+    }
+    codespan(e) {
+      let t = this.rules.inline.code.exec(e);
+      if (t) {
+        let n = t[2].replace(this.rules.other.newLineCharGlobal, " "), s = this.rules.other.nonSpaceChar.test(n), r = this.rules.other.startingSpaceChar.test(n) && this.rules.other.endingSpaceChar.test(n);
+        return s && r && (n = n.substring(1, n.length - 1)), { type: "codespan", raw: t[0], text: n };
+      }
+    }
+    br(e) {
+      let t = this.rules.inline.br.exec(e);
+      if (t) return { type: "br", raw: t[0] };
+    }
+    del(e, t, n = "") {
+      let s = this.rules.inline.delLDelim.exec(e);
+      if (!s) return;
+      if (!(s[1] || "") || !n || this.rules.inline.punctuation.exec(n)) {
+        let i = [...s[0]].length - 1, o, u, a = i, c = this.rules.inline.delRDelim;
+        for (c.lastIndex = 0, t = t.slice(-1 * e.length + i); (s = c.exec(t)) !== null; ) {
+          if (o = s[1] || s[2] || s[3] || s[4] || s[5] || s[6], !o || (u = [...o].length, u !== i)) continue;
+          if (s[3] || s[4]) {
+            a += u;
+            continue;
+          }
+          if (a -= u, a > 0) continue;
+          u = Math.min(u, u + a);
+          let p = [...s[0]][0].length, k = e.slice(0, i + s.index + p + u), h = k.slice(i, -i);
+          return { type: "del", raw: k, text: h, tokens: this.lexer.inlineTokens(h) };
+        }
+      }
+    }
+    autolink(e) {
+      let t = this.rules.inline.autolink.exec(e);
+      if (t) {
+        let n, s;
+        return t[2] === "@" ? (n = t[1], s = "mailto:" + n) : (n = t[1], s = n), { type: "link", raw: t[0], text: n, href: s, tokens: [{ type: "text", raw: n, text: n }] };
+      }
+    }
+    url(e) {
+      let t;
+      if (t = this.rules.inline.url.exec(e)) {
+        let n, s;
+        if (t[2] === "@") n = t[0], s = "mailto:" + n;
+        else {
+          let r;
+          do
+            r = t[0], t[0] = this.rules.inline._backpedal.exec(t[0])?.[0] ?? "";
+          while (r !== t[0]);
+          n = t[0], t[1] === "www." ? s = "http://" + t[0] : s = t[0];
+        }
+        return { type: "link", raw: t[0], text: n, href: s, tokens: [{ type: "text", raw: n, text: n }] };
+      }
+    }
+    inlineText(e) {
+      let t = this.rules.inline.text.exec(e);
+      if (t) {
+        let n = this.lexer.state.inRawBlock;
+        return { type: "text", raw: t[0], text: t[0], escaped: n };
+      }
+    }
+  };
+  var x = class l {
+    tokens;
+    options;
+    state;
+    inlineQueue;
+    tokenizer;
+    constructor(e) {
+      this.tokens = [], this.tokens.links = /* @__PURE__ */ Object.create(null), this.options = e || T, this.options.tokenizer = this.options.tokenizer || new w(), this.tokenizer = this.options.tokenizer, this.tokenizer.options = this.options, this.tokenizer.lexer = this, this.inlineQueue = [], this.state = { inLink: false, inRawBlock: false, top: true };
+      let t = { other: m, block: D.normal, inline: A.normal };
+      this.options.pedantic ? (t.block = D.pedantic, t.inline = A.pedantic) : this.options.gfm && (t.block = D.gfm, this.options.breaks ? t.inline = A.breaks : t.inline = A.gfm), this.tokenizer.rules = t;
+    }
+    static get rules() {
+      return { block: D, inline: A };
+    }
+    static lex(e, t) {
+      return new l(t).lex(e);
+    }
+    static lexInline(e, t) {
+      return new l(t).inlineTokens(e);
+    }
+    lex(e) {
+      e = e.replace(m.carriageReturn, `
+`), this.blockTokens(e, this.tokens);
+      for (let t = 0; t < this.inlineQueue.length; t++) {
+        let n = this.inlineQueue[t];
+        this.inlineTokens(n.src, n.tokens);
+      }
+      return this.inlineQueue = [], this.tokens;
+    }
+    blockTokens(e, t = [], n = false) {
+      this.tokenizer.lexer = this, this.options.pedantic && (e = e.replace(m.tabCharGlobal, "    ").replace(m.spaceLine, ""));
+      let s = 1 / 0;
+      for (; e; ) {
+        if (e.length < s) s = e.length;
+        else {
+          this.infiniteLoopError(e.charCodeAt(0));
+          break;
+        }
+        let r;
+        if (this.options.extensions?.block?.some((o) => (r = o.call({ lexer: this }, e, t)) ? (e = e.substring(r.raw.length), t.push(r), true) : false)) continue;
+        if (r = this.tokenizer.space(e)) {
+          e = e.substring(r.raw.length);
+          let o = t.at(-1);
+          r.raw.length === 1 && o !== void 0 ? o.raw += `
+` : t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.code(e)) {
+          e = e.substring(r.raw.length);
+          let o = t.at(-1);
+          o?.type === "paragraph" || o?.type === "text" ? (o.raw += (o.raw.endsWith(`
+`) ? "" : `
+`) + r.raw, o.text += `
+` + r.text, this.inlineQueue.at(-1).src = o.text) : t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.fences(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.heading(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.hr(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.blockquote(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.list(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.html(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.def(e)) {
+          e = e.substring(r.raw.length);
+          let o = t.at(-1);
+          o?.type === "paragraph" || o?.type === "text" ? (o.raw += (o.raw.endsWith(`
+`) ? "" : `
+`) + r.raw, o.text += `
+` + r.raw, this.inlineQueue.at(-1).src = o.text) : this.tokens.links[r.tag] || (this.tokens.links[r.tag] = { href: r.href, title: r.title }, t.push(r));
+          continue;
+        }
+        if (r = this.tokenizer.table(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        if (r = this.tokenizer.lheading(e)) {
+          e = e.substring(r.raw.length), t.push(r);
+          continue;
+        }
+        let i = e;
+        if (this.options.extensions?.startBlock) {
+          let o = 1 / 0, u = e.slice(1), a;
+          this.options.extensions.startBlock.forEach((c) => {
+            a = c.call({ lexer: this }, u), typeof a == "number" && a >= 0 && (o = Math.min(o, a));
+          }), o < 1 / 0 && o >= 0 && (i = e.substring(0, o + 1));
+        }
+        if (this.state.top && (r = this.tokenizer.paragraph(i))) {
+          let o = t.at(-1);
+          n && o?.type === "paragraph" ? (o.raw += (o.raw.endsWith(`
+`) ? "" : `
+`) + r.raw, o.text += `
+` + r.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = o.text) : t.push(r), n = i.length !== e.length, e = e.substring(r.raw.length);
+          continue;
+        }
+        if (r = this.tokenizer.text(e)) {
+          e = e.substring(r.raw.length);
+          let o = t.at(-1);
+          o?.type === "text" ? (o.raw += (o.raw.endsWith(`
+`) ? "" : `
+`) + r.raw, o.text += `
+` + r.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = o.text) : t.push(r);
+          continue;
+        }
+        if (e) {
+          this.infiniteLoopError(e.charCodeAt(0));
+          break;
+        }
+      }
+      return this.state.top = true, t;
+    }
+    inline(e, t = []) {
+      return this.inlineQueue.push({ src: e, tokens: t }), t;
+    }
+    inlineTokens(e, t = []) {
+      this.tokenizer.lexer = this;
+      let n = e, s = null;
+      if (this.tokens.links) {
+        let a = Object.keys(this.tokens.links);
+        if (a.length > 0) for (; (s = this.tokenizer.rules.inline.reflinkSearch.exec(n)) !== null; ) a.includes(s[0].slice(s[0].lastIndexOf("[") + 1, -1)) && (n = n.slice(0, s.index) + "[" + "a".repeat(s[0].length - 2) + "]" + n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
+      }
+      for (; (s = this.tokenizer.rules.inline.anyPunctuation.exec(n)) !== null; ) n = n.slice(0, s.index) + "++" + n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
+      let r;
+      for (; (s = this.tokenizer.rules.inline.blockSkip.exec(n)) !== null; ) r = s[2] ? s[2].length : 0, n = n.slice(0, s.index + r) + "[" + "a".repeat(s[0].length - r - 2) + "]" + n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
+      n = this.options.hooks?.emStrongMask?.call({ lexer: this }, n) ?? n;
+      let i = false, o = "", u = 1 / 0;
+      for (; e; ) {
+        if (e.length < u) u = e.length;
+        else {
+          this.infiniteLoopError(e.charCodeAt(0));
+          break;
+        }
+        i || (o = ""), i = false;
+        let a;
+        if (this.options.extensions?.inline?.some((p) => (a = p.call({ lexer: this }, e, t)) ? (e = e.substring(a.raw.length), t.push(a), true) : false)) continue;
+        if (a = this.tokenizer.escape(e)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.tag(e)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.link(e)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.reflink(e, this.tokens.links)) {
+          e = e.substring(a.raw.length);
+          let p = t.at(-1);
+          a.type === "text" && p?.type === "text" ? (p.raw += a.raw, p.text += a.text) : t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.emStrong(e, n, o)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.codespan(e)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.br(e)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.del(e, n, o)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (a = this.tokenizer.autolink(e)) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        if (!this.state.inLink && (a = this.tokenizer.url(e))) {
+          e = e.substring(a.raw.length), t.push(a);
+          continue;
+        }
+        let c = e;
+        if (this.options.extensions?.startInline) {
+          let p = 1 / 0, k = e.slice(1), h;
+          this.options.extensions.startInline.forEach((R) => {
+            h = R.call({ lexer: this }, k), typeof h == "number" && h >= 0 && (p = Math.min(p, h));
+          }), p < 1 / 0 && p >= 0 && (c = e.substring(0, p + 1));
+        }
+        if (a = this.tokenizer.inlineText(c)) {
+          e = e.substring(a.raw.length), a.raw.slice(-1) !== "_" && (o = a.raw.slice(-1)), i = true;
+          let p = t.at(-1);
+          p?.type === "text" ? (p.raw += a.raw, p.text += a.text) : t.push(a);
+          continue;
+        }
+        if (e) {
+          this.infiniteLoopError(e.charCodeAt(0));
+          break;
+        }
+      }
+      return t;
+    }
+    infiniteLoopError(e) {
+      let t = "Infinite loop on byte: " + e;
+      if (this.options.silent) console.error(t);
+      else throw new Error(t);
+    }
+  };
+  var y = class {
+    options;
+    parser;
+    constructor(e) {
+      this.options = e || T;
+    }
+    space(e) {
+      return "";
+    }
+    code({ text: e, lang: t, escaped: n }) {
+      let s = (t || "").match(m.notSpaceStart)?.[0], r = e.replace(m.endingNewline, "") + `
+`;
+      return s ? '<pre><code class="language-' + O(s) + '">' + (n ? r : O(r, true)) + `</code></pre>
+` : "<pre><code>" + (n ? r : O(r, true)) + `</code></pre>
+`;
+    }
+    blockquote({ tokens: e }) {
+      return `<blockquote>
+${this.parser.parse(e)}</blockquote>
+`;
+    }
+    html({ text: e }) {
+      return e;
+    }
+    def(e) {
+      return "";
+    }
+    heading({ tokens: e, depth: t }) {
+      return `<h${t}>${this.parser.parseInline(e)}</h${t}>
+`;
+    }
+    hr(e) {
+      return `<hr>
+`;
+    }
+    list(e) {
+      let t = e.ordered, n = e.start, s = "";
+      for (let o = 0; o < e.items.length; o++) {
+        let u = e.items[o];
+        s += this.listitem(u);
+      }
+      let r = t ? "ol" : "ul", i = t && n !== 1 ? ' start="' + n + '"' : "";
+      return "<" + r + i + `>
+` + s + "</" + r + `>
+`;
+    }
+    listitem(e) {
+      return `<li>${this.parser.parse(e.tokens)}</li>
+`;
+    }
+    checkbox({ checked: e }) {
+      return "<input " + (e ? 'checked="" ' : "") + 'disabled="" type="checkbox"> ';
+    }
+    paragraph({ tokens: e }) {
+      return `<p>${this.parser.parseInline(e)}</p>
+`;
+    }
+    table(e) {
+      let t = "", n = "";
+      for (let r = 0; r < e.header.length; r++) n += this.tablecell(e.header[r]);
+      t += this.tablerow({ text: n });
+      let s = "";
+      for (let r = 0; r < e.rows.length; r++) {
+        let i = e.rows[r];
+        n = "";
+        for (let o = 0; o < i.length; o++) n += this.tablecell(i[o]);
+        s += this.tablerow({ text: n });
+      }
+      return s && (s = `<tbody>${s}</tbody>`), `<table>
+<thead>
+` + t + `</thead>
+` + s + `</table>
+`;
+    }
+    tablerow({ text: e }) {
+      return `<tr>
+${e}</tr>
+`;
+    }
+    tablecell(e) {
+      let t = this.parser.parseInline(e.tokens), n = e.header ? "th" : "td";
+      return (e.align ? `<${n} align="${e.align}">` : `<${n}>`) + t + `</${n}>
+`;
+    }
+    strong({ tokens: e }) {
+      return `<strong>${this.parser.parseInline(e)}</strong>`;
+    }
+    em({ tokens: e }) {
+      return `<em>${this.parser.parseInline(e)}</em>`;
+    }
+    codespan({ text: e }) {
+      return `<code>${O(e, true)}</code>`;
+    }
+    br(e) {
+      return "<br>";
+    }
+    del({ tokens: e }) {
+      return `<del>${this.parser.parseInline(e)}</del>`;
+    }
+    link({ href: e, title: t, tokens: n }) {
+      let s = this.parser.parseInline(n), r = V(e);
+      if (r === null) return s;
+      e = r;
+      let i = '<a href="' + e + '"';
+      return t && (i += ' title="' + O(t) + '"'), i += ">" + s + "</a>", i;
+    }
+    image({ href: e, title: t, text: n, tokens: s }) {
+      s && (n = this.parser.parseInline(s, this.parser.textRenderer));
+      let r = V(e);
+      if (r === null) return O(n);
+      e = r;
+      let i = `<img src="${e}" alt="${O(n)}"`;
+      return t && (i += ` title="${O(t)}"`), i += ">", i;
+    }
+    text(e) {
+      return "tokens" in e && e.tokens ? this.parser.parseInline(e.tokens) : "escaped" in e && e.escaped ? e.text : O(e.text);
+    }
+  };
+  var L = class {
+    strong({ text: e }) {
+      return e;
+    }
+    em({ text: e }) {
+      return e;
+    }
+    codespan({ text: e }) {
+      return e;
+    }
+    del({ text: e }) {
+      return e;
+    }
+    html({ text: e }) {
+      return e;
+    }
+    text({ text: e }) {
+      return e;
+    }
+    link({ text: e }) {
+      return "" + e;
+    }
+    image({ text: e }) {
+      return "" + e;
+    }
+    br() {
+      return "";
+    }
+    checkbox({ raw: e }) {
+      return e;
+    }
+  };
+  var b = class l2 {
+    options;
+    renderer;
+    textRenderer;
+    constructor(e) {
+      this.options = e || T, this.options.renderer = this.options.renderer || new y(), this.renderer = this.options.renderer, this.renderer.options = this.options, this.renderer.parser = this, this.textRenderer = new L();
+    }
+    static parse(e, t) {
+      return new l2(t).parse(e);
+    }
+    static parseInline(e, t) {
+      return new l2(t).parseInline(e);
+    }
+    parse(e) {
+      this.renderer.parser = this;
+      let t = "";
+      for (let n = 0; n < e.length; n++) {
+        let s = e[n];
+        if (this.options.extensions?.renderers?.[s.type]) {
+          let i = s, o = this.options.extensions.renderers[i.type].call({ parser: this }, i);
+          if (o !== false || !["space", "hr", "heading", "code", "table", "blockquote", "list", "html", "def", "paragraph", "text"].includes(i.type)) {
+            t += o || "";
+            continue;
+          }
+        }
+        let r = s;
+        switch (r.type) {
+          case "space": {
+            t += this.renderer.space(r);
+            break;
+          }
+          case "hr": {
+            t += this.renderer.hr(r);
+            break;
+          }
+          case "heading": {
+            t += this.renderer.heading(r);
+            break;
+          }
+          case "code": {
+            t += this.renderer.code(r);
+            break;
+          }
+          case "table": {
+            t += this.renderer.table(r);
+            break;
+          }
+          case "blockquote": {
+            t += this.renderer.blockquote(r);
+            break;
+          }
+          case "list": {
+            t += this.renderer.list(r);
+            break;
+          }
+          case "checkbox": {
+            t += this.renderer.checkbox(r);
+            break;
+          }
+          case "html": {
+            t += this.renderer.html(r);
+            break;
+          }
+          case "def": {
+            t += this.renderer.def(r);
+            break;
+          }
+          case "paragraph": {
+            t += this.renderer.paragraph(r);
+            break;
+          }
+          case "text": {
+            t += this.renderer.text(r);
+            break;
+          }
+          default: {
+            let i = 'Token with "' + r.type + '" type was not found.';
+            if (this.options.silent) return console.error(i), "";
+            throw new Error(i);
+          }
+        }
+      }
+      return t;
+    }
+    parseInline(e, t = this.renderer) {
+      this.renderer.parser = this;
+      let n = "";
+      for (let s = 0; s < e.length; s++) {
+        let r = e[s];
+        if (this.options.extensions?.renderers?.[r.type]) {
+          let o = this.options.extensions.renderers[r.type].call({ parser: this }, r);
+          if (o !== false || !["escape", "html", "link", "image", "strong", "em", "codespan", "br", "del", "text"].includes(r.type)) {
+            n += o || "";
+            continue;
+          }
+        }
+        let i = r;
+        switch (i.type) {
+          case "escape": {
+            n += t.text(i);
+            break;
+          }
+          case "html": {
+            n += t.html(i);
+            break;
+          }
+          case "link": {
+            n += t.link(i);
+            break;
+          }
+          case "image": {
+            n += t.image(i);
+            break;
+          }
+          case "checkbox": {
+            n += t.checkbox(i);
+            break;
+          }
+          case "strong": {
+            n += t.strong(i);
+            break;
+          }
+          case "em": {
+            n += t.em(i);
+            break;
+          }
+          case "codespan": {
+            n += t.codespan(i);
+            break;
+          }
+          case "br": {
+            n += t.br(i);
+            break;
+          }
+          case "del": {
+            n += t.del(i);
+            break;
+          }
+          case "text": {
+            n += t.text(i);
+            break;
+          }
+          default: {
+            let o = 'Token with "' + i.type + '" type was not found.';
+            if (this.options.silent) return console.error(o), "";
+            throw new Error(o);
+          }
+        }
+      }
+      return n;
+    }
+  };
+  var P = class {
+    options;
+    block;
+    constructor(e) {
+      this.options = e || T;
+    }
+    static passThroughHooks = /* @__PURE__ */ new Set(["preprocess", "postprocess", "processAllTokens", "emStrongMask"]);
+    static passThroughHooksRespectAsync = /* @__PURE__ */ new Set(["preprocess", "postprocess", "processAllTokens"]);
+    preprocess(e) {
+      return e;
+    }
+    postprocess(e) {
+      return e;
+    }
+    processAllTokens(e) {
+      return e;
+    }
+    emStrongMask(e) {
+      return e;
+    }
+    provideLexer(e = this.block) {
+      return e ? x.lex : x.lexInline;
+    }
+    provideParser(e = this.block) {
+      return e ? b.parse : b.parseInline;
+    }
+  };
+  var q = class {
+    defaults = M();
+    options = this.setOptions;
+    parse = this.parseMarkdown(true);
+    parseInline = this.parseMarkdown(false);
+    Parser = b;
+    Renderer = y;
+    TextRenderer = L;
+    Lexer = x;
+    Tokenizer = w;
+    Hooks = P;
+    constructor(...e) {
+      this.use(...e);
+    }
+    walkTokens(e, t) {
+      let n = [];
+      for (let s of e) switch (n = n.concat(t.call(this, s)), s.type) {
+        case "table": {
+          let r = s;
+          for (let i of r.header) n = n.concat(this.walkTokens(i.tokens, t));
+          for (let i of r.rows) for (let o of i) n = n.concat(this.walkTokens(o.tokens, t));
+          break;
+        }
+        case "list": {
+          let r = s;
+          n = n.concat(this.walkTokens(r.items, t));
+          break;
+        }
+        default: {
+          let r = s;
+          this.defaults.extensions?.childTokens?.[r.type] ? this.defaults.extensions.childTokens[r.type].forEach((i) => {
+            let o = r[i].flat(1 / 0);
+            n = n.concat(this.walkTokens(o, t));
+          }) : r.tokens && (n = n.concat(this.walkTokens(r.tokens, t)));
+        }
+      }
+      return n;
+    }
+    use(...e) {
+      let t = this.defaults.extensions || { renderers: {}, childTokens: {} };
+      return e.forEach((n) => {
+        let s = { ...n };
+        if (s.async = this.defaults.async || s.async || false, n.extensions && (n.extensions.forEach((r) => {
+          if (!r.name) throw new Error("extension name required");
+          if ("renderer" in r) {
+            let i = t.renderers[r.name];
+            i ? t.renderers[r.name] = function(...o) {
+              let u = r.renderer.apply(this, o);
+              return u === false && (u = i.apply(this, o)), u;
+            } : t.renderers[r.name] = r.renderer;
+          }
+          if ("tokenizer" in r) {
+            if (!r.level || r.level !== "block" && r.level !== "inline") throw new Error("extension level must be 'block' or 'inline'");
+            let i = t[r.level];
+            i ? i.unshift(r.tokenizer) : t[r.level] = [r.tokenizer], r.start && (r.level === "block" ? t.startBlock ? t.startBlock.push(r.start) : t.startBlock = [r.start] : r.level === "inline" && (t.startInline ? t.startInline.push(r.start) : t.startInline = [r.start]));
+          }
+          "childTokens" in r && r.childTokens && (t.childTokens[r.name] = r.childTokens);
+        }), s.extensions = t), n.renderer) {
+          let r = this.defaults.renderer || new y(this.defaults);
+          for (let i in n.renderer) {
+            if (!(i in r)) throw new Error(`renderer '${i}' does not exist`);
+            if (["options", "parser"].includes(i)) continue;
+            let o = i, u = n.renderer[o], a = r[o];
+            r[o] = (...c) => {
+              let p = u.apply(r, c);
+              return p === false && (p = a.apply(r, c)), p || "";
+            };
+          }
+          s.renderer = r;
+        }
+        if (n.tokenizer) {
+          let r = this.defaults.tokenizer || new w(this.defaults);
+          for (let i in n.tokenizer) {
+            if (!(i in r)) throw new Error(`tokenizer '${i}' does not exist`);
+            if (["options", "rules", "lexer"].includes(i)) continue;
+            let o = i, u = n.tokenizer[o], a = r[o];
+            r[o] = (...c) => {
+              let p = u.apply(r, c);
+              return p === false && (p = a.apply(r, c)), p;
+            };
+          }
+          s.tokenizer = r;
+        }
+        if (n.hooks) {
+          let r = this.defaults.hooks || new P();
+          for (let i in n.hooks) {
+            if (!(i in r)) throw new Error(`hook '${i}' does not exist`);
+            if (["options", "block"].includes(i)) continue;
+            let o = i, u = n.hooks[o], a = r[o];
+            P.passThroughHooks.has(i) ? r[o] = (c) => {
+              if (this.defaults.async && P.passThroughHooksRespectAsync.has(i)) return (async () => {
+                let k = await u.call(r, c);
+                return a.call(r, k);
+              })();
+              let p = u.call(r, c);
+              return a.call(r, p);
+            } : r[o] = (...c) => {
+              if (this.defaults.async) return (async () => {
+                let k = await u.apply(r, c);
+                return k === false && (k = await a.apply(r, c)), k;
+              })();
+              let p = u.apply(r, c);
+              return p === false && (p = a.apply(r, c)), p;
+            };
+          }
+          s.hooks = r;
+        }
+        if (n.walkTokens) {
+          let r = this.defaults.walkTokens, i = n.walkTokens;
+          s.walkTokens = function(o) {
+            let u = [];
+            return u.push(i.call(this, o)), r && (u = u.concat(r.call(this, o))), u;
+          };
+        }
+        this.defaults = { ...this.defaults, ...s };
+      }), this;
+    }
+    setOptions(e) {
+      return this.defaults = { ...this.defaults, ...e }, this;
+    }
+    lexer(e, t) {
+      return x.lex(e, t ?? this.defaults);
+    }
+    parser(e, t) {
+      return b.parse(e, t ?? this.defaults);
+    }
+    parseMarkdown(e) {
+      return (n, s) => {
+        let r = { ...s }, i = { ...this.defaults, ...r }, o = this.onError(!!i.silent, !!i.async);
+        if (this.defaults.async === true && r.async === false) return o(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
+        if (typeof n > "u" || n === null) return o(new Error("marked(): input parameter is undefined or null"));
+        if (typeof n != "string") return o(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(n) + ", string expected"));
+        if (i.hooks && (i.hooks.options = i, i.hooks.block = e), i.async) return (async () => {
+          let u = i.hooks ? await i.hooks.preprocess(n) : n, c = await (i.hooks ? await i.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(u, i), p = i.hooks ? await i.hooks.processAllTokens(c) : c;
+          i.walkTokens && await Promise.all(this.walkTokens(p, i.walkTokens));
+          let h = await (i.hooks ? await i.hooks.provideParser(e) : e ? b.parse : b.parseInline)(p, i);
+          return i.hooks ? await i.hooks.postprocess(h) : h;
+        })().catch(o);
+        try {
+          i.hooks && (n = i.hooks.preprocess(n));
+          let a = (i.hooks ? i.hooks.provideLexer(e) : e ? x.lex : x.lexInline)(n, i);
+          i.hooks && (a = i.hooks.processAllTokens(a)), i.walkTokens && this.walkTokens(a, i.walkTokens);
+          let p = (i.hooks ? i.hooks.provideParser(e) : e ? b.parse : b.parseInline)(a, i);
+          return i.hooks && (p = i.hooks.postprocess(p)), p;
+        } catch (u) {
+          return o(u);
+        }
+      };
+    }
+    onError(e, t) {
+      return (n) => {
+        if (n.message += `
+Please report this to https://github.com/markedjs/marked.`, e) {
+          let s = "<p>An error occurred:</p><pre>" + O(n.message + "", true) + "</pre>";
+          return t ? Promise.resolve(s) : s;
+        }
+        if (t) return Promise.reject(n);
+        throw n;
+      };
+    }
+  };
+  var z = new q();
+  function g(l3, e) {
+    return z.parse(l3, e);
+  }
+  g.options = g.setOptions = function(l3) {
+    return z.setOptions(l3), g.defaults = z.defaults, N(g.defaults), g;
+  };
+  g.getDefaults = M;
+  g.defaults = T;
+  g.use = function(...l3) {
+    return z.use(...l3), g.defaults = z.defaults, N(g.defaults), g;
+  };
+  g.walkTokens = function(l3, e) {
+    return z.walkTokens(l3, e);
+  };
+  g.parseInline = z.parseInline;
+  g.Parser = b;
+  g.parser = b.parse;
+  g.Renderer = y;
+  g.TextRenderer = L;
+  g.Lexer = x;
+  g.lexer = x.lex;
+  g.Tokenizer = w;
+  g.Hooks = P;
+  g.parse = g;
+  var Ft = g.options;
+  var Ut = g.setOptions;
+  var Kt = g.use;
+  var Wt = g.walkTokens;
+  var Xt = g.parseInline;
+  var Vt = b.parse;
+  var Yt = x.lex;
+
+  // node_modules/turndown/lib/turndown.browser.es.js
+  function extend(destination) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) destination[key] = source[key];
+      }
+    }
+    return destination;
+  }
+  function repeat(character, count) {
+    return Array(count + 1).join(character);
+  }
+  function trimLeadingNewlines(string) {
+    return string.replace(/^\n*/, "");
+  }
+  function trimTrailingNewlines(string) {
+    var indexEnd = string.length;
+    while (indexEnd > 0 && string[indexEnd - 1] === "\n") indexEnd--;
+    return string.substring(0, indexEnd);
+  }
+  function trimNewlines(string) {
+    return trimTrailingNewlines(trimLeadingNewlines(string));
+  }
+  var blockElements = ["ADDRESS", "ARTICLE", "ASIDE", "AUDIO", "BLOCKQUOTE", "BODY", "CANVAS", "CENTER", "DD", "DIR", "DIV", "DL", "DT", "FIELDSET", "FIGCAPTION", "FIGURE", "FOOTER", "FORM", "FRAMESET", "H1", "H2", "H3", "H4", "H5", "H6", "HEADER", "HGROUP", "HR", "HTML", "ISINDEX", "LI", "MAIN", "MENU", "NAV", "NOFRAMES", "NOSCRIPT", "OL", "OUTPUT", "P", "PRE", "SECTION", "TABLE", "TBODY", "TD", "TFOOT", "TH", "THEAD", "TR", "UL"];
+  function isBlock(node) {
+    return is(node, blockElements);
+  }
+  var voidElements = ["AREA", "BASE", "BR", "COL", "COMMAND", "EMBED", "HR", "IMG", "INPUT", "KEYGEN", "LINK", "META", "PARAM", "SOURCE", "TRACK", "WBR"];
+  function isVoid(node) {
+    return is(node, voidElements);
+  }
+  function hasVoid(node) {
+    return has(node, voidElements);
+  }
+  var meaningfulWhenBlankElements = ["A", "TABLE", "THEAD", "TBODY", "TFOOT", "TH", "TD", "IFRAME", "SCRIPT", "AUDIO", "VIDEO"];
+  function isMeaningfulWhenBlank(node) {
+    return is(node, meaningfulWhenBlankElements);
+  }
+  function hasMeaningfulWhenBlank(node) {
+    return has(node, meaningfulWhenBlankElements);
+  }
+  function is(node, tagNames) {
+    return tagNames.indexOf(node.nodeName) >= 0;
+  }
+  function has(node, tagNames) {
+    return node.getElementsByTagName && tagNames.some(function(tagName) {
+      return node.getElementsByTagName(tagName).length;
+    });
+  }
+  var markdownEscapes = [[/\\/g, "\\\\"], [/\*/g, "\\*"], [/^-/g, "\\-"], [/^\+ /g, "\\+ "], [/^(=+)/g, "\\$1"], [/^(#{1,6}) /g, "\\$1 "], [/`/g, "\\`"], [/^~~~/g, "\\~~~"], [/\[/g, "\\["], [/\]/g, "\\]"], [/^>/g, "\\>"], [/_/g, "\\_"], [/^(\d+)\. /g, "$1\\. "]];
+  function escapeMarkdown(string) {
+    return markdownEscapes.reduce(function(accumulator, escape) {
+      return accumulator.replace(escape[0], escape[1]);
+    }, string);
+  }
+  var rules = {};
+  rules.paragraph = {
+    filter: "p",
+    replacement: function(content) {
+      return "\n\n" + content + "\n\n";
+    }
+  };
+  rules.lineBreak = {
+    filter: "br",
+    replacement: function(content, node, options) {
+      return options.br + "\n";
+    }
+  };
+  rules.heading = {
+    filter: ["h1", "h2", "h3", "h4", "h5", "h6"],
+    replacement: function(content, node, options) {
+      var hLevel = Number(node.nodeName.charAt(1));
+      if (options.headingStyle === "setext" && hLevel < 3) {
+        var underline = repeat(hLevel === 1 ? "=" : "-", content.length);
+        return "\n\n" + content + "\n" + underline + "\n\n";
+      } else {
+        return "\n\n" + repeat("#", hLevel) + " " + content + "\n\n";
+      }
+    }
+  };
+  rules.blockquote = {
+    filter: "blockquote",
+    replacement: function(content) {
+      content = trimNewlines(content).replace(/^/gm, "> ");
+      return "\n\n" + content + "\n\n";
+    }
+  };
+  rules.list = {
+    filter: ["ul", "ol"],
+    replacement: function(content, node) {
+      var parent = node.parentNode;
+      if (parent.nodeName === "LI" && parent.lastElementChild === node) {
+        return "\n" + content;
+      } else {
+        return "\n\n" + content + "\n\n";
+      }
+    }
+  };
+  rules.listItem = {
+    filter: "li",
+    replacement: function(content, node, options) {
+      var prefix = options.bulletListMarker + "   ";
+      var parent = node.parentNode;
+      if (parent.nodeName === "OL") {
+        var start = parent.getAttribute("start");
+        var index = Array.prototype.indexOf.call(parent.children, node);
+        prefix = (start ? Number(start) + index : index + 1) + ".  ";
+      }
+      var isParagraph = /\n$/.test(content);
+      content = trimNewlines(content) + (isParagraph ? "\n" : "");
+      content = content.replace(/\n/gm, "\n" + " ".repeat(prefix.length));
+      return prefix + content + (node.nextSibling ? "\n" : "");
+    }
+  };
+  rules.indentedCodeBlock = {
+    filter: function(node, options) {
+      return options.codeBlockStyle === "indented" && node.nodeName === "PRE" && node.firstChild && node.firstChild.nodeName === "CODE";
+    },
+    replacement: function(content, node, options) {
+      return "\n\n    " + node.firstChild.textContent.replace(/\n/g, "\n    ") + "\n\n";
+    }
+  };
+  rules.fencedCodeBlock = {
+    filter: function(node, options) {
+      return options.codeBlockStyle === "fenced" && node.nodeName === "PRE" && node.firstChild && node.firstChild.nodeName === "CODE";
+    },
+    replacement: function(content, node, options) {
+      var className = node.firstChild.getAttribute("class") || "";
+      var language = (className.match(/language-(\S+)/) || [null, ""])[1];
+      var code = node.firstChild.textContent;
+      var fenceChar = options.fence.charAt(0);
+      var fenceSize = 3;
+      var fenceInCodeRegex = new RegExp("^" + fenceChar + "{3,}", "gm");
+      var match;
+      while (match = fenceInCodeRegex.exec(code)) {
+        if (match[0].length >= fenceSize) {
+          fenceSize = match[0].length + 1;
+        }
+      }
+      var fence = repeat(fenceChar, fenceSize);
+      return "\n\n" + fence + language + "\n" + code.replace(/\n$/, "") + "\n" + fence + "\n\n";
+    }
+  };
+  rules.horizontalRule = {
+    filter: "hr",
+    replacement: function(content, node, options) {
+      return "\n\n" + options.hr + "\n\n";
+    }
+  };
+  rules.inlineLink = {
+    filter: function(node, options) {
+      return options.linkStyle === "inlined" && node.nodeName === "A" && node.getAttribute("href");
+    },
+    replacement: function(content, node) {
+      var href = escapeLinkDestination(node.getAttribute("href"));
+      var title = escapeLinkTitle(cleanAttribute(node.getAttribute("title")));
+      var titlePart = title ? ' "' + title + '"' : "";
+      return "[" + content + "](" + href + titlePart + ")";
+    }
+  };
+  rules.referenceLink = {
+    filter: function(node, options) {
+      return options.linkStyle === "referenced" && node.nodeName === "A" && node.getAttribute("href");
+    },
+    replacement: function(content, node, options) {
+      var href = escapeLinkDestination(node.getAttribute("href"));
+      var title = cleanAttribute(node.getAttribute("title"));
+      if (title) title = ' "' + escapeLinkTitle(title) + '"';
+      var replacement;
+      var reference;
+      switch (options.linkReferenceStyle) {
+        case "collapsed":
+          replacement = "[" + content + "][]";
+          reference = "[" + content + "]: " + href + title;
+          break;
+        case "shortcut":
+          replacement = "[" + content + "]";
+          reference = "[" + content + "]: " + href + title;
+          break;
+        default:
+          var id = this.references.length + 1;
+          replacement = "[" + content + "][" + id + "]";
+          reference = "[" + id + "]: " + href + title;
+      }
+      this.references.push(reference);
+      return replacement;
+    },
+    references: [],
+    append: function(options) {
+      var references = "";
+      if (this.references.length) {
+        references = "\n\n" + this.references.join("\n") + "\n\n";
+        this.references = [];
+      }
+      return references;
+    }
+  };
+  rules.emphasis = {
+    filter: ["em", "i"],
+    replacement: function(content, node, options) {
+      if (!content.trim()) return "";
+      return options.emDelimiter + content + options.emDelimiter;
+    }
+  };
+  rules.strong = {
+    filter: ["strong", "b"],
+    replacement: function(content, node, options) {
+      if (!content.trim()) return "";
+      return options.strongDelimiter + content + options.strongDelimiter;
+    }
+  };
+  rules.code = {
+    filter: function(node) {
+      var hasSiblings = node.previousSibling || node.nextSibling;
+      var isCodeBlock = node.parentNode.nodeName === "PRE" && !hasSiblings;
+      return node.nodeName === "CODE" && !isCodeBlock;
+    },
+    replacement: function(content) {
+      if (!content) return "";
+      content = content.replace(/\r?\n|\r/g, " ");
+      var extraSpace = /^`|^ .*?[^ ].* $|`$/.test(content) ? " " : "";
+      var delimiter = "`";
+      var matches2 = content.match(/`+/gm) || [];
+      while (matches2.indexOf(delimiter) !== -1) delimiter = delimiter + "`";
+      return delimiter + extraSpace + content + extraSpace + delimiter;
+    }
+  };
+  rules.image = {
+    filter: "img",
+    replacement: function(content, node) {
+      var alt = escapeMarkdown(cleanAttribute(node.getAttribute("alt")));
+      var src = escapeLinkDestination(node.getAttribute("src") || "");
+      var title = cleanAttribute(node.getAttribute("title"));
+      var titlePart = title ? ' "' + escapeLinkTitle(title) + '"' : "";
+      return src ? "![" + alt + "](" + src + titlePart + ")" : "";
+    }
+  };
+  function cleanAttribute(attribute) {
+    return attribute ? attribute.replace(/(\n+\s*)+/g, "\n") : "";
+  }
+  function escapeLinkDestination(destination) {
+    var escaped = destination.replace(/([<>()])/g, "\\$1");
+    return escaped.indexOf(" ") >= 0 ? "<" + escaped + ">" : escaped;
+  }
+  function escapeLinkTitle(title) {
+    return title.replace(/"/g, '\\"');
+  }
+  function Rules(options) {
+    this.options = options;
+    this._keep = [];
+    this._remove = [];
+    this.blankRule = {
+      replacement: options.blankReplacement
+    };
+    this.keepReplacement = options.keepReplacement;
+    this.defaultRule = {
+      replacement: options.defaultReplacement
+    };
+    this.array = [];
+    for (var key in options.rules) this.array.push(options.rules[key]);
+  }
+  Rules.prototype = {
+    add: function(key, rule) {
+      this.array.unshift(rule);
+    },
+    keep: function(filter) {
+      this._keep.unshift({
+        filter,
+        replacement: this.keepReplacement
+      });
+    },
+    remove: function(filter) {
+      this._remove.unshift({
+        filter,
+        replacement: function() {
+          return "";
+        }
+      });
+    },
+    forNode: function(node) {
+      if (node.isBlank) return this.blankRule;
+      var rule;
+      if (rule = findRule(this.array, node, this.options)) return rule;
+      if (rule = findRule(this._keep, node, this.options)) return rule;
+      if (rule = findRule(this._remove, node, this.options)) return rule;
+      return this.defaultRule;
+    },
+    forEach: function(fn) {
+      for (var i = 0; i < this.array.length; i++) fn(this.array[i], i);
+    }
+  };
+  function findRule(rules3, node, options) {
+    for (var i = 0; i < rules3.length; i++) {
+      var rule = rules3[i];
+      if (filterValue(rule, node, options)) return rule;
+    }
+    return void 0;
+  }
+  function filterValue(rule, node, options) {
+    var filter = rule.filter;
+    if (typeof filter === "string") {
+      if (filter === node.nodeName.toLowerCase()) return true;
+    } else if (Array.isArray(filter)) {
+      if (filter.indexOf(node.nodeName.toLowerCase()) > -1) return true;
+    } else if (typeof filter === "function") {
+      if (filter.call(rule, node, options)) return true;
+    } else {
+      throw new TypeError("`filter` needs to be a string, array, or function");
+    }
+  }
+  function collapseWhitespace(options) {
+    var element = options.element;
+    var isBlock2 = options.isBlock;
+    var isVoid2 = options.isVoid;
+    var isPre = options.isPre || function(node2) {
+      return node2.nodeName === "PRE";
+    };
+    if (!element.firstChild || isPre(element)) return;
+    var prevText = null;
+    var keepLeadingWs = false;
+    var prev = null;
+    var node = next(prev, element, isPre);
+    while (node !== element) {
+      if (node.nodeType === 3 || node.nodeType === 4) {
+        var text = node.data.replace(/[ \r\n\t]+/g, " ");
+        if ((!prevText || / $/.test(prevText.data)) && !keepLeadingWs && text[0] === " ") {
+          text = text.substr(1);
+        }
+        if (!text) {
+          node = remove(node);
+          continue;
+        }
+        node.data = text;
+        prevText = node;
+      } else if (node.nodeType === 1) {
+        if (isBlock2(node) || node.nodeName === "BR") {
+          if (prevText) {
+            prevText.data = prevText.data.replace(/ $/, "");
+          }
+          prevText = null;
+          keepLeadingWs = false;
+        } else if (isVoid2(node) || isPre(node)) {
+          prevText = null;
+          keepLeadingWs = true;
+        } else if (prevText) {
+          keepLeadingWs = false;
+        }
+      } else {
+        node = remove(node);
+        continue;
+      }
+      var nextNode = next(prev, node, isPre);
+      prev = node;
+      node = nextNode;
+    }
+    if (prevText) {
+      prevText.data = prevText.data.replace(/ $/, "");
+      if (!prevText.data) {
+        remove(prevText);
+      }
+    }
+  }
+  function remove(node) {
+    var next2 = node.nextSibling || node.parentNode;
+    node.parentNode.removeChild(node);
+    return next2;
+  }
+  function next(prev, current, isPre) {
+    if (prev && prev.parentNode === current || isPre(current)) {
+      return current.nextSibling || current.parentNode;
+    }
+    return current.firstChild || current.nextSibling || current.parentNode;
+  }
+  var root = typeof window !== "undefined" ? window : {};
+  function canParseHTMLNatively() {
+    var Parser = root.DOMParser;
+    var canParse = false;
+    try {
+      if (new Parser().parseFromString("", "text/html")) {
+        canParse = true;
+      }
+    } catch (e) {
+    }
+    return canParse;
+  }
+  function createHTMLParser() {
+    var Parser = function() {
+    };
+    {
+      if (shouldUseActiveX()) {
+        Parser.prototype.parseFromString = function(string) {
+          var doc3 = new window.ActiveXObject("htmlfile");
+          doc3.designMode = "on";
+          doc3.open();
+          doc3.write(string);
+          doc3.close();
+          return doc3;
+        };
+      } else {
+        Parser.prototype.parseFromString = function(string) {
+          var doc3 = document.implementation.createHTMLDocument("");
+          doc3.open();
+          doc3.write(string);
+          doc3.close();
+          return doc3;
+        };
+      }
+    }
+    return Parser;
+  }
+  function shouldUseActiveX() {
+    var useActiveX = false;
+    try {
+      document.implementation.createHTMLDocument("").open();
+    } catch (e) {
+      if (root.ActiveXObject) useActiveX = true;
+    }
+    return useActiveX;
+  }
+  var HTMLParser = canParseHTMLNatively() ? root.DOMParser : createHTMLParser();
+  function RootNode(input, options) {
+    var root2;
+    if (typeof input === "string") {
+      var doc3 = htmlParser().parseFromString(
+        // DOM parsers arrange elements in the <head> and <body>.
+        // Wrapping in a custom element ensures elements are reliably arranged in
+        // a single element.
+        '<x-turndown id="turndown-root">' + input + "</x-turndown>",
+        "text/html"
+      );
+      root2 = doc3.getElementById("turndown-root");
+    } else {
+      root2 = input.cloneNode(true);
+    }
+    collapseWhitespace({
+      element: root2,
+      isBlock,
+      isVoid,
+      isPre: options.preformattedCode ? isPreOrCode : null
+    });
+    return root2;
+  }
+  var _htmlParser;
+  function htmlParser() {
+    _htmlParser = _htmlParser || new HTMLParser();
+    return _htmlParser;
+  }
+  function isPreOrCode(node) {
+    return node.nodeName === "PRE" || node.nodeName === "CODE";
+  }
+  function Node3(node, options) {
+    node.isBlock = isBlock(node);
+    node.isCode = node.nodeName === "CODE" || node.parentNode.isCode;
+    node.isBlank = isBlank(node);
+    node.flankingWhitespace = flankingWhitespace(node, options);
+    return node;
+  }
+  function isBlank(node) {
+    return !isVoid(node) && !isMeaningfulWhenBlank(node) && /^\s*$/i.test(node.textContent) && !hasVoid(node) && !hasMeaningfulWhenBlank(node);
+  }
+  function flankingWhitespace(node, options) {
+    if (node.isBlock || options.preformattedCode && node.isCode) {
+      return {
+        leading: "",
+        trailing: ""
+      };
+    }
+    var edges = edgeWhitespace(node.textContent);
+    if (edges.leadingAscii && isFlankedByWhitespace("left", node, options)) {
+      edges.leading = edges.leadingNonAscii;
+    }
+    if (edges.trailingAscii && isFlankedByWhitespace("right", node, options)) {
+      edges.trailing = edges.trailingNonAscii;
+    }
+    return {
+      leading: edges.leading,
+      trailing: edges.trailing
+    };
+  }
+  function edgeWhitespace(string) {
+    var m2 = string.match(/^(([ \t\r\n]*)(\s*))(?:(?=\S)[\s\S]*\S)?((\s*?)([ \t\r\n]*))$/);
+    return {
+      leading: m2[1],
+      // whole string for whitespace-only strings
+      leadingAscii: m2[2],
+      leadingNonAscii: m2[3],
+      trailing: m2[4],
+      // empty for whitespace-only strings
+      trailingNonAscii: m2[5],
+      trailingAscii: m2[6]
+    };
+  }
+  function isFlankedByWhitespace(side, node, options) {
+    var sibling;
+    var regExp;
+    var isFlanked;
+    if (side === "left") {
+      sibling = node.previousSibling;
+      regExp = / $/;
+    } else {
+      sibling = node.nextSibling;
+      regExp = /^ /;
+    }
+    if (sibling) {
+      if (sibling.nodeType === 3) {
+        isFlanked = regExp.test(sibling.nodeValue);
+      } else if (options.preformattedCode && sibling.nodeName === "CODE") {
+        isFlanked = false;
+      } else if (sibling.nodeType === 1 && !isBlock(sibling)) {
+        isFlanked = regExp.test(sibling.textContent);
+      }
+    }
+    return isFlanked;
+  }
+  var reduce = Array.prototype.reduce;
+  function TurndownService(options) {
+    if (!(this instanceof TurndownService)) return new TurndownService(options);
+    var defaults = {
+      rules,
+      headingStyle: "setext",
+      hr: "* * *",
+      bulletListMarker: "*",
+      codeBlockStyle: "indented",
+      fence: "```",
+      emDelimiter: "_",
+      strongDelimiter: "**",
+      linkStyle: "inlined",
+      linkReferenceStyle: "full",
+      br: "  ",
+      preformattedCode: false,
+      blankReplacement: function(content, node) {
+        return node.isBlock ? "\n\n" : "";
+      },
+      keepReplacement: function(content, node) {
+        return node.isBlock ? "\n\n" + node.outerHTML + "\n\n" : node.outerHTML;
+      },
+      defaultReplacement: function(content, node) {
+        return node.isBlock ? "\n\n" + content + "\n\n" : content;
+      }
+    };
+    this.options = extend({}, defaults, options);
+    this.rules = new Rules(this.options);
+  }
+  TurndownService.prototype = {
+    /**
+     * The entry point for converting a string or DOM node to Markdown
+     * @public
+     * @param {String|HTMLElement} input The string or DOM node to convert
+     * @returns A Markdown representation of the input
+     * @type String
+     */
+    turndown: function(input) {
+      if (!canConvert(input)) {
+        throw new TypeError(input + " is not a string, or an element/document/fragment node.");
+      }
+      if (input === "") return "";
+      var output = process.call(this, new RootNode(input, this.options));
+      return postProcess.call(this, output);
+    },
+    /**
+     * Add one or more plugins
+     * @public
+     * @param {Function|Array} plugin The plugin or array of plugins to add
+     * @returns The Turndown instance for chaining
+     * @type Object
+     */
+    use: function(plugin) {
+      if (Array.isArray(plugin)) {
+        for (var i = 0; i < plugin.length; i++) this.use(plugin[i]);
+      } else if (typeof plugin === "function") {
+        plugin(this);
+      } else {
+        throw new TypeError("plugin must be a Function or an Array of Functions");
+      }
+      return this;
+    },
+    /**
+     * Adds a rule
+     * @public
+     * @param {String} key The unique key of the rule
+     * @param {Object} rule The rule
+     * @returns The Turndown instance for chaining
+     * @type Object
+     */
+    addRule: function(key, rule) {
+      this.rules.add(key, rule);
+      return this;
+    },
+    /**
+     * Keep a node (as HTML) that matches the filter
+     * @public
+     * @param {String|Array|Function} filter The unique key of the rule
+     * @returns The Turndown instance for chaining
+     * @type Object
+     */
+    keep: function(filter) {
+      this.rules.keep(filter);
+      return this;
+    },
+    /**
+     * Remove a node that matches the filter
+     * @public
+     * @param {String|Array|Function} filter The unique key of the rule
+     * @returns The Turndown instance for chaining
+     * @type Object
+     */
+    remove: function(filter) {
+      this.rules.remove(filter);
+      return this;
+    },
+    /**
+     * Escapes Markdown syntax
+     * @public
+     * @param {String} string The string to escape
+     * @returns A string with Markdown syntax escaped
+     * @type String
+     */
+    escape: function(string) {
+      return escapeMarkdown(string);
+    }
+  };
+  function process(parentNode2) {
+    var self = this;
+    return reduce.call(parentNode2.childNodes, function(output, node) {
+      node = new Node3(node, self.options);
+      var replacement = "";
+      if (node.nodeType === 3) {
+        replacement = node.isCode ? node.nodeValue : self.escape(node.nodeValue);
+      } else if (node.nodeType === 1) {
+        replacement = replacementForNode.call(self, node);
+      }
+      return join2(output, replacement);
+    }, "");
+  }
+  function postProcess(output) {
+    var self = this;
+    this.rules.forEach(function(rule) {
+      if (typeof rule.append === "function") {
+        output = join2(output, rule.append(self.options));
+      }
+    });
+    return output.replace(/^[\t\r\n]+/, "").replace(/[\t\r\n\s]+$/, "");
+  }
+  function replacementForNode(node) {
+    var rule = this.rules.forNode(node);
+    var content = process.call(this, node);
+    var whitespace = node.flankingWhitespace;
+    if (whitespace.leading || whitespace.trailing) content = content.trim();
+    return whitespace.leading + rule.replacement(content, node, this.options) + whitespace.trailing;
+  }
+  function join2(output, replacement) {
+    var s1 = trimTrailingNewlines(output);
+    var s2 = trimLeadingNewlines(replacement);
+    var nls = Math.max(output.length - s1.length, replacement.length - s2.length);
+    var separator = "\n\n".substring(0, nls);
+    return s1 + separator + s2;
+  }
+  function canConvert(input) {
+    return input != null && (typeof input === "string" || input.nodeType && (input.nodeType === 1 || input.nodeType === 9 || input.nodeType === 11));
+  }
+
+  // node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.es.js
+  var highlightRegExp = /highlight-(?:text|source)-([a-z0-9]+)/;
+  function highlightedCodeBlock(turndownService) {
+    turndownService.addRule("highlightedCodeBlock", {
+      filter: function(node) {
+        var firstChild = node.firstChild;
+        return node.nodeName === "DIV" && highlightRegExp.test(node.className) && firstChild && firstChild.nodeName === "PRE";
+      },
+      replacement: function(content, node, options) {
+        var className = node.className || "";
+        var language = (className.match(highlightRegExp) || [null, ""])[1];
+        return "\n\n" + options.fence + language + "\n" + node.firstChild.textContent + "\n" + options.fence + "\n\n";
+      }
+    });
+  }
+  function strikethrough(turndownService) {
+    turndownService.addRule("strikethrough", {
+      filter: ["del", "s", "strike"],
+      replacement: function(content) {
+        return "~" + content + "~";
+      }
+    });
+  }
+  var indexOf = Array.prototype.indexOf;
+  var every = Array.prototype.every;
+  var rules2 = {};
+  rules2.tableCell = {
+    filter: ["th", "td"],
+    replacement: function(content, node) {
+      return cell(content, node);
+    }
+  };
+  rules2.tableRow = {
+    filter: "tr",
+    replacement: function(content, node) {
+      var borderCells = "";
+      var alignMap = { left: ":--", right: "--:", center: ":-:" };
+      if (isHeadingRow(node)) {
+        for (var i = 0; i < node.childNodes.length; i++) {
+          var border = "---";
+          var align = (node.childNodes[i].getAttribute("align") || "").toLowerCase();
+          if (align) border = alignMap[align] || border;
+          borderCells += cell(border, node.childNodes[i]);
+        }
+      }
+      return "\n" + content + (borderCells ? "\n" + borderCells : "");
+    }
+  };
+  rules2.table = {
+    // Only convert tables with a heading row.
+    // Tables with no heading row are kept using `keep` (see below).
+    filter: function(node) {
+      return node.nodeName === "TABLE" && isHeadingRow(node.rows[0]);
+    },
+    replacement: function(content) {
+      content = content.replace("\n\n", "\n");
+      return "\n\n" + content + "\n\n";
+    }
+  };
+  rules2.tableSection = {
+    filter: ["thead", "tbody", "tfoot"],
+    replacement: function(content) {
+      return content;
+    }
+  };
+  function isHeadingRow(tr) {
+    var parentNode2 = tr.parentNode;
+    return parentNode2.nodeName === "THEAD" || parentNode2.firstChild === tr && (parentNode2.nodeName === "TABLE" || isFirstTbody(parentNode2)) && every.call(tr.childNodes, function(n) {
+      return n.nodeName === "TH";
+    });
+  }
+  function isFirstTbody(element) {
+    var previousSibling = element.previousSibling;
+    return element.nodeName === "TBODY" && (!previousSibling || previousSibling.nodeName === "THEAD" && /^\s*$/i.test(previousSibling.textContent));
+  }
+  function cell(content, node) {
+    var index = indexOf.call(node.parentNode.childNodes, node);
+    var prefix = " ";
+    if (index === 0) prefix = "| ";
+    return prefix + content + " |";
+  }
+  function tables(turndownService) {
+    turndownService.keep(function(node) {
+      return node.nodeName === "TABLE" && !isHeadingRow(node.rows[0]);
+    });
+    for (var key in rules2) turndownService.addRule(key, rules2[key]);
+  }
+  function taskListItems(turndownService) {
+    turndownService.addRule("taskListItems", {
+      filter: function(node) {
+        return node.type === "checkbox" && node.parentNode.nodeName === "LI";
+      },
+      replacement: function(content, node) {
+        return (node.checked ? "[x]" : "[ ]") + " ";
+      }
+    });
+  }
+  function gfm(turndownService) {
+    turndownService.use([
+      highlightedCodeBlock,
+      strikethrough,
+      tables,
+      taskListItems
+    ]);
+  }
+
   // node_modules/prosemirror-tables/dist/index.js
   var readFromCache;
   var addToCache;
@@ -13336,8 +15343,8 @@ var AshokanBundle = (() => {
         const top = i / this.width | 0;
         let right = left + 1;
         let bottom = top + 1;
-        for (let j = 1; right < this.width && this.map[i + j] == curPos; j++) right++;
-        for (let j = 1; bottom < this.height && this.map[i + this.width * j] == curPos; j++) bottom++;
+        for (let j2 = 1; right < this.width && this.map[i + j2] == curPos; j2++) right++;
+        for (let j2 = 1; bottom < this.height && this.map[i + this.width * j2] == curPos; j2++) bottom++;
         return {
           left,
           top,
@@ -13361,9 +15368,9 @@ var AshokanBundle = (() => {
         return this.map[left + this.width * (dir < 0 ? top - 1 : bottom)];
       }
     }
-    rectBetween(a, b) {
+    rectBetween(a, b2) {
       const { left: leftA, right: rightA, top: topA, bottom: bottomA } = this.findCell(a);
-      const { left: leftB, right: rightB, top: topB, bottom: bottomB } = this.findCell(b);
+      const { left: leftB, right: rightB, top: topB, bottom: bottomB } = this.findCell(b2);
       return {
         left: Math.min(leftA, leftB),
         top: Math.min(topA, topB),
@@ -13426,17 +15433,17 @@ var AshokanBundle = (() => {
             break;
           }
           const start = mapPos + h * width;
-          for (let w = 0; w < colspan; w++) {
-            if (map2[start + w] == 0) map2[start + w] = pos;
+          for (let w2 = 0; w2 < colspan; w2++) {
+            if (map2[start + w2] == 0) map2[start + w2] = pos;
             else (problems || (problems = [])).push({
               type: "collision",
               row,
               pos,
-              n: colspan - w
+              n: colspan - w2
             });
-            const colW = colwidth && colwidth[w];
+            const colW = colwidth && colwidth[w2];
             if (colW) {
-              const widthIndex = (start + w) % width * 2, prev = colWidths[widthIndex];
+              const widthIndex = (start + w2) % width * 2, prev = colWidths[widthIndex];
               if (prev == null || prev != colW && colWidths[widthIndex + 1] == 1) {
                 colWidths[widthIndex] = colW;
                 colWidths[widthIndex + 1] = 1;
@@ -13470,17 +15477,17 @@ var AshokanBundle = (() => {
     for (let row = 0; row < table.childCount; row++) {
       const rowNode = table.child(row);
       let rowWidth = 0;
-      if (hasRowSpan) for (let j = 0; j < row; j++) {
-        const prevRow = table.child(j);
+      if (hasRowSpan) for (let j2 = 0; j2 < row; j2++) {
+        const prevRow = table.child(j2);
         for (let i = 0; i < prevRow.childCount; i++) {
-          const cell = prevRow.child(i);
-          if (j + cell.attrs.rowspan > row) rowWidth += cell.attrs.colspan;
+          const cell2 = prevRow.child(i);
+          if (j2 + cell2.attrs.rowspan > row) rowWidth += cell2.attrs.colspan;
         }
       }
       for (let i = 0; i < rowNode.childCount; i++) {
-        const cell = rowNode.child(i);
-        rowWidth += cell.attrs.colspan;
-        if (cell.attrs.rowspan > 1) hasRowSpan = true;
+        const cell2 = rowNode.child(i);
+        rowWidth += cell2.attrs.colspan;
+        if (cell2.attrs.rowspan > 1) hasRowSpan = true;
       }
       if (width == -1) width = rowWidth;
       else if (width != rowWidth) width = Math.max(width, rowWidth);
@@ -13498,9 +15505,9 @@ var AshokanBundle = (() => {
       if (!node) throw new RangeError(`No cell with offset ${pos} found`);
       let updated = null;
       const attrs = node.attrs;
-      for (let j = 0; j < attrs.colspan; j++) {
-        const colWidth = colWidths[(i + j) % map2.width * 2];
-        if (colWidth != null && (!attrs.colwidth || attrs.colwidth[j] != colWidth)) (updated || (updated = freshColWidth(attrs)))[j] = colWidth;
+      for (let j2 = 0; j2 < attrs.colspan; j2++) {
+        const colWidth = colWidths[(i + j2) % map2.width * 2];
+        if (colWidth != null && (!attrs.colwidth || attrs.colwidth[j2] != colWidth)) (updated || (updated = freshColWidth(attrs)))[j2] = colWidth;
       }
       if (updated) map2.problems.unshift({
         type: "colwidth mismatch",
@@ -13636,19 +15643,19 @@ var AshokanBundle = (() => {
   }
   var tableEditingKey = new PluginKey("selectingCells");
   function cellAround($pos) {
-    for (let d = $pos.depth - 1; d > 0; d--) if ($pos.node(d).type.spec.tableRole == "row") return $pos.node(0).resolve($pos.before(d + 1));
+    for (let d2 = $pos.depth - 1; d2 > 0; d2--) if ($pos.node(d2).type.spec.tableRole == "row") return $pos.node(0).resolve($pos.before(d2 + 1));
     return null;
   }
   function cellWrapping($pos) {
-    for (let d = $pos.depth; d > 0; d--) {
-      const role = $pos.node(d).type.spec.tableRole;
-      if (role === "cell" || role === "header_cell") return $pos.node(d);
+    for (let d2 = $pos.depth; d2 > 0; d2--) {
+      const role = $pos.node(d2).type.spec.tableRole;
+      if (role === "cell" || role === "header_cell") return $pos.node(d2);
     }
     return null;
   }
   function isInTable(state) {
     const $head = state.selection.$head;
-    for (let d = $head.depth; d > 0; d--) if ($head.node(d).type.spec.tableRole == "row") return true;
+    for (let d2 = $head.depth; d2 > 0; d2--) if ($head.node(d2).type.spec.tableRole == "row") return true;
     return false;
   }
   function selectionCell(state) {
@@ -13693,7 +15700,7 @@ var AshokanBundle = (() => {
     if (result.colwidth) {
       result.colwidth = result.colwidth.slice();
       result.colwidth.splice(pos, n);
-      if (!result.colwidth.some((w) => w > 0)) result.colwidth = null;
+      if (!result.colwidth.some((w2) => w2 > 0)) result.colwidth = null;
     }
     return result;
   }
@@ -13723,10 +15730,10 @@ var AshokanBundle = (() => {
       const cells = map2.cellsInRect(rect).filter((p) => p != $headCell.pos - tableStart);
       cells.unshift($headCell.pos - tableStart);
       const ranges = cells.map((pos) => {
-        const cell = table.nodeAt(pos);
-        if (!cell) throw new RangeError(`No cell with offset ${pos} found`);
+        const cell2 = table.nodeAt(pos);
+        if (!cell2) throw new RangeError(`No cell with offset ${pos} found`);
         const from2 = tableStart + pos + 1;
-        return new SelectionRange(doc3.resolve(from2), doc3.resolve(from2 + cell.content.size));
+        return new SelectionRange(doc3.resolve(from2), doc3.resolve(from2 + cell2.content.size));
       });
       super(ranges[0].$from, ranges[0].$to, ranges);
       this.$anchorCell = $anchorCell;
@@ -13757,28 +15764,28 @@ var AshokanBundle = (() => {
           if (seen[pos]) continue;
           seen[pos] = true;
           const cellRect = map2.findCell(pos);
-          let cell = table.nodeAt(pos);
-          if (!cell) throw new RangeError(`No cell with offset ${pos} found`);
+          let cell2 = table.nodeAt(pos);
+          if (!cell2) throw new RangeError(`No cell with offset ${pos} found`);
           const extraLeft = rect.left - cellRect.left;
           const extraRight = cellRect.right - rect.right;
           if (extraLeft > 0 || extraRight > 0) {
-            let attrs = cell.attrs;
+            let attrs = cell2.attrs;
             if (extraLeft > 0) attrs = removeColSpan(attrs, 0, extraLeft);
             if (extraRight > 0) attrs = removeColSpan(attrs, attrs.colspan - extraRight, extraRight);
             if (cellRect.left < rect.left) {
-              cell = cell.type.createAndFill(attrs);
-              if (!cell) throw new RangeError(`Could not create cell with attrs ${JSON.stringify(attrs)}`);
-            } else cell = cell.type.create(attrs, cell.content);
+              cell2 = cell2.type.createAndFill(attrs);
+              if (!cell2) throw new RangeError(`Could not create cell with attrs ${JSON.stringify(attrs)}`);
+            } else cell2 = cell2.type.create(attrs, cell2.content);
           }
           if (cellRect.top < rect.top || cellRect.bottom > rect.bottom) {
             const attrs = {
-              ...cell.attrs,
+              ...cell2.attrs,
               rowspan: Math.min(cellRect.bottom, rect.bottom) - Math.max(cellRect.top, rect.top)
             };
-            if (cellRect.top < rect.top) cell = cell.type.createAndFill(attrs);
-            else cell = cell.type.create(attrs, cell.content);
+            if (cellRect.top < rect.top) cell2 = cell2.type.createAndFill(attrs);
+            else cell2 = cell2.type.create(attrs, cell2.content);
           }
-          rowContent.push(cell);
+          rowContent.push(cell2);
         }
         rows.push(table.child(row).copy(Fragment.from(rowContent)));
       }
@@ -13905,7 +15912,7 @@ var AshokanBundle = (() => {
     let beforeTo = $to.pos;
     let depth = $from.depth;
     for (; depth >= 0; depth--, afterFrom++) if ($from.after(depth + 1) < $from.end(depth)) break;
-    for (let d = $to.depth; d >= 0; d--, beforeTo--) if ($to.before(d + 1) > $to.start(d)) break;
+    for (let d2 = $to.depth; d2 >= 0; d2--, beforeTo--) if ($to.before(d2 + 1) > $to.start(d2)) break;
     return afterFrom == beforeTo && /row|table/.test($from.node(depth).type.spec.tableRole);
   }
   function isTextSelectionAcrossCells({ $from, $to }) {
@@ -13951,15 +15958,15 @@ var AshokanBundle = (() => {
   var fixTablesKey = new PluginKey("fix-tables");
   function changedDescendants(old, cur, offset, f) {
     const oldSize = old.childCount, curSize = cur.childCount;
-    outer: for (let i = 0, j = 0; i < curSize; i++) {
+    outer: for (let i = 0, j2 = 0; i < curSize; i++) {
       const child = cur.child(i);
-      for (let scan = j, e = Math.min(oldSize, i + 3); scan < e; scan++) if (old.child(scan) == child) {
-        j = scan + 1;
+      for (let scan = j2, e = Math.min(oldSize, i + 3); scan < e; scan++) if (old.child(scan) == child) {
+        j2 = scan + 1;
         offset += child.nodeSize;
         continue outer;
       }
       f(child, offset);
-      if (j < oldSize && old.child(j).sameMarkup(child)) changedDescendants(old.child(j), child, offset + 1, f);
+      if (j2 < oldSize && old.child(j2).sameMarkup(child)) changedDescendants(old.child(j2), child, offset + 1, f);
       else child.nodesBetween(0, child.content.size, f, offset + 1);
       offset += child.nodeSize;
     }
@@ -13982,24 +15989,24 @@ var AshokanBundle = (() => {
     for (let i = 0; i < map2.problems.length; i++) {
       const prob = map2.problems[i];
       if (prob.type == "collision") {
-        const cell = table.nodeAt(prob.pos);
-        if (!cell) continue;
-        const attrs = cell.attrs;
-        for (let j = 0; j < attrs.rowspan; j++) mustAdd[prob.row + j] += prob.n;
+        const cell2 = table.nodeAt(prob.pos);
+        if (!cell2) continue;
+        const attrs = cell2.attrs;
+        for (let j2 = 0; j2 < attrs.rowspan; j2++) mustAdd[prob.row + j2] += prob.n;
         tr.setNodeMarkup(tr.mapping.map(tablePos + 1 + prob.pos), null, removeColSpan(attrs, attrs.colspan - prob.n, prob.n));
       } else if (prob.type == "missing") mustAdd[prob.row] += prob.n;
       else if (prob.type == "overlong_rowspan") {
-        const cell = table.nodeAt(prob.pos);
-        if (!cell) continue;
+        const cell2 = table.nodeAt(prob.pos);
+        if (!cell2) continue;
         tr.setNodeMarkup(tr.mapping.map(tablePos + 1 + prob.pos), null, {
-          ...cell.attrs,
-          rowspan: cell.attrs.rowspan - prob.n
+          ...cell2.attrs,
+          rowspan: cell2.attrs.rowspan - prob.n
         });
       } else if (prob.type == "colwidth mismatch") {
-        const cell = table.nodeAt(prob.pos);
-        if (!cell) continue;
+        const cell2 = table.nodeAt(prob.pos);
+        if (!cell2) continue;
         tr.setNodeMarkup(tr.mapping.map(tablePos + 1 + prob.pos), null, {
-          ...cell.attrs,
+          ...cell2.attrs,
           colwidth: prob.colwidth
         });
       } else if (prob.type == "zero_sized") {
@@ -14020,7 +16027,7 @@ var AshokanBundle = (() => {
         let role = "cell";
         if (row.firstChild) role = row.firstChild.type.spec.tableRole;
         const nodes2 = [];
-        for (let j = 0; j < add; j++) {
+        for (let j2 = 0; j2 < add; j2++) {
           const node = tableNodeTypes(state.schema)[role].createAndFill();
           if (node) nodes2.push(node);
         }
@@ -14051,9 +16058,9 @@ var AshokanBundle = (() => {
       const index = row * map2.width + col;
       if (col > 0 && col < map2.width && map2.map[index - 1] == map2.map[index]) {
         const pos = map2.map[index];
-        const cell = table.nodeAt(pos);
-        tr.setNodeMarkup(tr.mapping.map(tableStart + pos), null, addColSpan(cell.attrs, col - map2.colCount(pos)));
-        row += cell.attrs.rowspan - 1;
+        const cell2 = table.nodeAt(pos);
+        tr.setNodeMarkup(tr.mapping.map(tableStart + pos), null, addColSpan(cell2.attrs, col - map2.colCount(pos)));
+        row += cell2.attrs.rowspan - 1;
       } else {
         const type = refColumn == null ? tableNodeTypes(table.type.schema).cell : table.nodeAt(map2.map[index + refColumn]).type;
         const pos = map2.positionAt(row, col, table);
@@ -14083,12 +16090,12 @@ var AshokanBundle = (() => {
     for (let row = 0; row < map2.height; ) {
       const index = row * map2.width + col;
       const pos = map2.map[index];
-      const cell = table.nodeAt(pos);
-      const attrs = cell.attrs;
+      const cell2 = table.nodeAt(pos);
+      const attrs = cell2.attrs;
       if (col > 0 && map2.map[index - 1] == pos || col < map2.width - 1 && map2.map[index + 1] == pos) tr.setNodeMarkup(tr.mapping.slice(mapStart).map(tableStart + pos), null, removeColSpan(attrs, col - map2.colCount(pos)));
       else {
         const start = tr.mapping.slice(mapStart).map(tableStart + pos);
-        tr.delete(start, start + cell.nodeSize);
+        tr.delete(start, start + cell2.nodeSize);
       }
       row += attrs.rowspan;
     }
@@ -14175,12 +16182,12 @@ var AshokanBundle = (() => {
         });
         col += attrs.colspan - 1;
       } else if (row < map2.height && pos == map2.map[index + map2.width]) {
-        const cell = table.nodeAt(pos);
-        const attrs = cell.attrs;
-        const copy2 = cell.type.create({
+        const cell2 = table.nodeAt(pos);
+        const attrs = cell2.attrs;
+        const copy2 = cell2.type.create({
           ...attrs,
-          rowspan: cell.attrs.rowspan - 1
-        }, cell.content);
+          rowspan: cell2.attrs.rowspan - 1
+        }, cell2.content);
         const newPos = map2.positionAt(row + 1, col, table);
         tr.insert(tr.mapping.slice(mapFrom).map(tableStart + newPos), copy2);
         col += attrs.colspan - 1;
@@ -14204,8 +16211,8 @@ var AshokanBundle = (() => {
     }
     return true;
   }
-  function isEmpty(cell) {
-    const c = cell.content;
+  function isEmpty(cell2) {
+    const c = cell2.content;
     return c.childCount == 1 && c.child(0).isTextblock && c.child(0).childCount == 0;
   }
   function cellsOverlapRectangle({ width, height, map: map2 }, rect) {
@@ -14236,16 +16243,16 @@ var AshokanBundle = (() => {
       let mergedCell;
       for (let row = rect.top; row < rect.bottom; row++) for (let col = rect.left; col < rect.right; col++) {
         const cellPos = map2.map[row * map2.width + col];
-        const cell = rect.table.nodeAt(cellPos);
-        if (seen[cellPos] || !cell) continue;
+        const cell2 = rect.table.nodeAt(cellPos);
+        if (seen[cellPos] || !cell2) continue;
         seen[cellPos] = true;
         if (mergedPos == null) {
           mergedPos = cellPos;
-          mergedCell = cell;
+          mergedCell = cell2;
         } else {
-          if (!isEmpty(cell)) content = content.append(cell.content);
+          if (!isEmpty(cell2)) content = content.append(cell2.content);
           const mapped = tr.mapping.map(cellPos + rect.tableStart);
-          tr.delete(mapped, mapped + cell.nodeSize);
+          tr.delete(mapped, mapped + cell2.nodeSize);
         }
       }
       if (mergedPos == null || mergedCell == null) return true;
@@ -14360,8 +16367,8 @@ var AshokanBundle = (() => {
       bottom: type == "column" ? rect.map.height : 1
     });
     for (let i = 0; i < cellPositions.length; i++) {
-      const cell = rect.table.nodeAt(cellPositions[i]);
-      if (cell && cell.type !== types.header_cell) return false;
+      const cell2 = rect.table.nodeAt(cellPositions[i]);
+      if (cell2 && cell2.type !== types.header_cell) return false;
     }
     return true;
   }
@@ -14390,8 +16397,8 @@ var AshokanBundle = (() => {
         const newType = type == "column" ? isHeaderColumnEnabled ? types.cell : types.header_cell : type == "row" ? isHeaderRowEnabled ? types.cell : types.header_cell : types.cell;
         rect.map.cellsInRect(cellsRect).forEach((relativeCellPos) => {
           const cellPos = relativeCellPos + rect.tableStart;
-          const cell = tr.doc.nodeAt(cellPos);
-          if (cell) tr.setNodeMarkup(cellPos, newType, cell.attrs);
+          const cell2 = tr.doc.nodeAt(cellPos);
+          if (cell2) tr.setNodeMarkup(cellPos, newType, cell2.attrs);
         });
         dispatch(tr);
       }
@@ -14425,10 +16432,10 @@ var AshokanBundle = (() => {
   function goToNextCell(direction) {
     return function(state, dispatch) {
       if (!isInTable(state)) return false;
-      const cell = findNextCell(selectionCell(state), direction);
-      if (cell == null) return false;
+      const cell2 = findNextCell(selectionCell(state), direction);
+      if (cell2 == null) return false;
       if (dispatch) {
-        const $cell = state.doc.resolve(cell);
+        const $cell = state.doc.resolve(cell2);
         dispatch(state.tr.setSelection(TextSelection.between($cell, moveCellForward($cell))).scrollIntoView());
       }
       return true;
@@ -14436,8 +16443,8 @@ var AshokanBundle = (() => {
   }
   function deleteTable(state, dispatch) {
     const $pos = state.selection.$anchor;
-    for (let d = $pos.depth; d > 0; d--) if ($pos.node(d).type.spec.tableRole == "table") {
-      if (dispatch) dispatch(state.tr.delete($pos.before(d), $pos.after(d)).scrollIntoView());
+    for (let d2 = $pos.depth; d2 > 0; d2--) if ($pos.node(d2).type.spec.tableRole == "table") {
+      if (dispatch) dispatch(state.tr.delete($pos.before(d2), $pos.after(d2)).scrollIntoView());
       return true;
     }
     return false;
@@ -14448,8 +16455,8 @@ var AshokanBundle = (() => {
     if (dispatch) {
       const tr = state.tr;
       const baseContent = tableNodeTypes(state.schema).cell.createAndFill().content;
-      sel.forEachCell((cell, pos) => {
-        if (!cell.content.eq(baseContent)) tr.replace(tr.mapping.map(pos + 1), tr.mapping.map(pos + cell.nodeSize - 1), new Slice(baseContent, 0, 0));
+      sel.forEachCell((cell2, pos) => {
+        if (!cell2.content.eq(baseContent)) tr.replace(tr.mapping.map(pos + 1), tr.mapping.map(pos + cell2.nodeSize - 1), new Slice(baseContent, 0, 0));
       });
       if (tr.docChanged) dispatch(tr);
     }
@@ -14481,8 +16488,8 @@ var AshokanBundle = (() => {
     const widths = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      for (let j = row.childCount - 1; j >= 0; j--) {
-        const { rowspan, colspan } = row.child(j).attrs;
+      for (let j2 = row.childCount - 1; j2 >= 0; j2--) {
+        const { rowspan, colspan } = row.child(j2).attrs;
         for (let r = i; r < i + rowspan; r++) widths[r] = (widths[r] || 0) + colspan;
       }
     }
@@ -14514,11 +16521,11 @@ var AshokanBundle = (() => {
       for (let row = 0; row < rows.length; row++) {
         const frag = rows[row], cells = [];
         for (let col = added[row] || 0, i = 0; col < newWidth; i++) {
-          let cell = frag.child(i % frag.childCount);
-          if (col + cell.attrs.colspan > newWidth) cell = cell.type.createChecked(removeColSpan(cell.attrs, cell.attrs.colspan, col + cell.attrs.colspan - newWidth), cell.content);
-          cells.push(cell);
-          col += cell.attrs.colspan;
-          for (let j = 1; j < cell.attrs.rowspan; j++) added[row + j] = (added[row + j] || 0) + cell.attrs.colspan;
+          let cell2 = frag.child(i % frag.childCount);
+          if (col + cell2.attrs.colspan > newWidth) cell2 = cell2.type.createChecked(removeColSpan(cell2.attrs, cell2.attrs.colspan, col + cell2.attrs.colspan - newWidth), cell2.content);
+          cells.push(cell2);
+          col += cell2.attrs.colspan;
+          for (let j2 = 1; j2 < cell2.attrs.rowspan; j2++) added[row + j2] = (added[row + j2] || 0) + cell2.attrs.colspan;
         }
         newRows.push(Fragment.from(cells));
       }
@@ -14529,13 +16536,13 @@ var AshokanBundle = (() => {
       const newRows = [];
       for (let row = 0, i = 0; row < newHeight; row++, i++) {
         const cells = [], source = rows[i % height];
-        for (let j = 0; j < source.childCount; j++) {
-          let cell = source.child(j);
-          if (row + cell.attrs.rowspan > newHeight) cell = cell.type.create({
-            ...cell.attrs,
-            rowspan: Math.max(1, newHeight - cell.attrs.rowspan)
-          }, cell.content);
-          cells.push(cell);
+        for (let j2 = 0; j2 < source.childCount; j2++) {
+          let cell2 = source.child(j2);
+          if (row + cell2.attrs.rowspan > newHeight) cell2 = cell2.type.create({
+            ...cell2.attrs,
+            rowspan: Math.max(1, newHeight - cell2.attrs.rowspan)
+          }, cell2.content);
+          cells.push(cell2);
         }
         newRows.push(Fragment.from(cells));
       }
@@ -14582,17 +16589,17 @@ var AshokanBundle = (() => {
       const index = top * map2.width + col, pos = map2.map[index];
       if (map2.map[index - map2.width] == pos) {
         found2 = true;
-        const cell = table.nodeAt(pos);
+        const cell2 = table.nodeAt(pos);
         const { top: cellTop, left: cellLeft } = map2.findCell(pos);
         tr.setNodeMarkup(tr.mapping.slice(mapFrom).map(pos + start), null, {
-          ...cell.attrs,
+          ...cell2.attrs,
           rowspan: top - cellTop
         });
-        tr.insert(tr.mapping.slice(mapFrom).map(map2.positionAt(top, cellLeft, table)), cell.type.createAndFill({
-          ...cell.attrs,
-          rowspan: cellTop + cell.attrs.rowspan - top
+        tr.insert(tr.mapping.slice(mapFrom).map(map2.positionAt(top, cellLeft, table)), cell2.type.createAndFill({
+          ...cell2.attrs,
+          rowspan: cellTop + cell2.attrs.rowspan - top
         }));
-        col += cell.attrs.colspan - 1;
+        col += cell2.attrs.colspan - 1;
       }
     }
     return found2;
@@ -14604,12 +16611,12 @@ var AshokanBundle = (() => {
       const index = row * map2.width + left, pos = map2.map[index];
       if (map2.map[index - 1] == pos) {
         found2 = true;
-        const cell = table.nodeAt(pos);
+        const cell2 = table.nodeAt(pos);
         const cellLeft = map2.colCount(pos);
         const updatePos = tr.mapping.slice(mapFrom).map(pos + start);
-        tr.setNodeMarkup(updatePos, null, removeColSpan(cell.attrs, left - cellLeft, cell.attrs.colspan - (left - cellLeft)));
-        tr.insert(updatePos + cell.nodeSize, cell.type.createAndFill(removeColSpan(cell.attrs, 0, left - cellLeft)));
-        row += cell.attrs.rowspan - 1;
+        tr.setNodeMarkup(updatePos, null, removeColSpan(cell2.attrs, left - cellLeft, cell2.attrs.colspan - (left - cellLeft)));
+        tr.insert(updatePos + cell2.nodeSize, cell2.type.createAndFill(removeColSpan(cell2.attrs, 0, left - cellLeft)));
+        row += cell2.attrs.rowspan - 1;
       }
     }
     return found2;
@@ -14702,7 +16709,7 @@ var AshokanBundle = (() => {
     view2.dispatch(view2.state.tr.setSelection(new CellSelection($cell)));
     return true;
   }
-  function handlePaste(view2, _, slice2) {
+  function handlePaste(view2, _2, slice2) {
     if (!isInTable(view2.state)) return false;
     let cells = pastedCells(slice2);
     const sel = view2.state.selection;
@@ -14774,11 +16781,11 @@ var AshokanBundle = (() => {
   function atEndOfCell(view2, axis, dir) {
     if (!(view2.state.selection instanceof TextSelection)) return null;
     const { $head } = view2.state.selection;
-    for (let d = $head.depth - 1; d >= 0; d--) {
-      const parent = $head.node(d);
-      if ((dir < 0 ? $head.index(d) : $head.indexAfter(d)) != (dir < 0 ? 0 : parent.childCount)) return null;
+    for (let d2 = $head.depth - 1; d2 >= 0; d2--) {
+      const parent = $head.node(d2);
+      if ((dir < 0 ? $head.index(d2) : $head.indexAfter(d2)) != (dir < 0 ? 0 : parent.childCount)) return null;
       if (parent.type.spec.tableRole == "cell" || parent.type.spec.tableRole == "header_cell") {
-        const cellPos = $head.before(d);
+        const cellPos = $head.before(d2);
         const dirStr = axis == "vert" ? dir > 0 ? "down" : "up" : dir > 0 ? "right" : "left";
         return view2.endOfTextblock(dirStr) ? cellPos : null;
       }
@@ -14828,8 +16835,8 @@ var AshokanBundle = (() => {
     if (!row) return;
     for (let i = 0, col = 0; i < row.childCount; i++) {
       const { colspan, colwidth } = row.child(i).attrs;
-      for (let j = 0; j < colspan; j++, col++) {
-        const hasWidth = overrideCol == col ? overrideValue : colwidth && colwidth[j];
+      for (let j2 = 0; j2 < colspan; j2++, col++) {
+        const hasWidth = overrideCol == col ? overrideValue : colwidth && colwidth[j2];
         const cssWidth = hasWidth ? hasWidth + "px" : "";
         totalWidth += hasWidth || defaultCellMinWidth;
         if (!hasWidth) fixedWidth = false;
@@ -14862,7 +16869,7 @@ var AshokanBundle = (() => {
     const plugin = new Plugin({
       key: columnResizingPluginKey,
       state: {
-        init(_, state) {
+        init(_2, state) {
           var _plugin$spec;
           const nodeViews = (_plugin$spec = plugin.spec) === null || _plugin$spec === void 0 || (_plugin$spec = _plugin$spec.props) === null || _plugin$spec === void 0 ? void 0 : _plugin$spec.nodeViews;
           const tableName = tableNodeTypes(state.schema).table.name;
@@ -14924,21 +16931,21 @@ var AshokanBundle = (() => {
     if (!pluginState) return;
     if (!pluginState.dragging) {
       const target = domCellAround(event.target);
-      let cell = -1;
+      let cell2 = -1;
       if (target) {
         const { left, right } = target.getBoundingClientRect();
-        if (event.clientX - left <= handleWidth) cell = edgeCell(view2, event, "left", handleWidth);
-        else if (right - event.clientX <= handleWidth) cell = edgeCell(view2, event, "right", handleWidth);
+        if (event.clientX - left <= handleWidth) cell2 = edgeCell(view2, event, "left", handleWidth);
+        else if (right - event.clientX <= handleWidth) cell2 = edgeCell(view2, event, "right", handleWidth);
       }
-      if (cell != pluginState.activeHandle) {
-        if (!lastColumnResizable && cell !== -1) {
-          const $cell = view2.state.doc.resolve(cell);
+      if (cell2 != pluginState.activeHandle) {
+        if (!lastColumnResizable && cell2 !== -1) {
+          const $cell = view2.state.doc.resolve(cell2);
           const table = $cell.node(-1);
           const map2 = TableMap.get(table);
           const tableStart = $cell.start(-1);
           if (map2.colCount($cell.pos - tableStart) + $cell.nodeAfter.attrs.colspan - 1 == map2.width - 1) return;
         }
-        updateHandle(view2, cell);
+        updateHandle(view2, cell2);
       }
     }
   }
@@ -14953,8 +16960,8 @@ var AshokanBundle = (() => {
     const win = (_view$dom$ownerDocume = view2.dom.ownerDocument.defaultView) !== null && _view$dom$ownerDocume !== void 0 ? _view$dom$ownerDocume : window;
     const pluginState = columnResizingPluginKey.getState(view2.state);
     if (!pluginState || pluginState.activeHandle == -1 || pluginState.dragging) return false;
-    const cell = view2.state.doc.nodeAt(pluginState.activeHandle);
-    const width = currentColWidth(view2, pluginState.activeHandle, cell.attrs);
+    const cell2 = view2.state.doc.nodeAt(pluginState.activeHandle);
+    const width = currentColWidth(view2, pluginState.activeHandle, cell2.attrs);
     view2.dispatch(view2.state.tr.setMeta(columnResizingPluginKey, { setDragging: {
       startX: event.clientX,
       startWidth: width
@@ -15022,8 +17029,8 @@ var AshokanBundle = (() => {
   function updateHandle(view2, value) {
     view2.dispatch(view2.state.tr.setMeta(columnResizingPluginKey, { setHandle: value }));
   }
-  function updateColumnWidth(view2, cell, width) {
-    const $cell = view2.state.doc.resolve(cell);
+  function updateColumnWidth(view2, cell2, width) {
+    const $cell = view2.state.doc.resolve(cell2);
     const table = $cell.node(-1), map2 = TableMap.get(table), start = $cell.start(-1);
     const col = map2.colCount($cell.pos - start) + $cell.nodeAfter.attrs.colspan - 1;
     const tr = view2.state.tr;
@@ -15043,8 +17050,8 @@ var AshokanBundle = (() => {
     }
     if (tr.docChanged) view2.dispatch(tr);
   }
-  function displayColumnWidth(view2, cell, width, defaultCellMinWidth) {
-    const $cell = view2.state.doc.resolve(cell);
+  function displayColumnWidth(view2, cell2, width, defaultCellMinWidth) {
+    const $cell = view2.state.doc.resolve(cell2);
     const table = $cell.node(-1), start = $cell.start(-1);
     const col = TableMap.get(table).colCount($cell.pos - start) + $cell.nodeAfter.attrs.colspan - 1;
     let dom = view2.domAtPos($cell.start(-1)).node;
@@ -15055,9 +17062,9 @@ var AshokanBundle = (() => {
   function zeroes(n) {
     return Array(n).fill(0);
   }
-  function handleDecorations(state, cell) {
+  function handleDecorations(state, cell2) {
     const decorations = [];
-    const $cell = state.doc.resolve(cell);
+    const $cell = state.doc.resolve(cell2);
     const table = $cell.node(-1);
     if (!table) return DecorationSet.empty;
     const map2 = TableMap.get(table);
@@ -15102,7 +17109,7 @@ var AshokanBundle = (() => {
         handleKeyDown: handleKeyDown2,
         handlePaste
       },
-      appendTransaction(_, oldState, state) {
+      appendTransaction(_2, oldState, state) {
         return normalizeSelection(state, fixTables(state, oldState), allowTableNodeSelection);
       }
     });
@@ -15127,7 +17134,7 @@ var AshokanBundle = (() => {
       group: "block",
       content: "inline*",
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "p", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "p", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["p", bagToDOM(node), 0];
       }
@@ -15139,7 +17146,7 @@ var AshokanBundle = (() => {
       attrs: { level: { default: 1 }, attrs: { default: {} } },
       parseDOM: [1, 2, 3, 4, 5, 6].map((level) => ({
         tag: "h" + level,
-        getAttrs: (d) => ({ level, attrs: bagFromDOM(d) })
+        getAttrs: (d2) => ({ level, attrs: bagFromDOM(d2) })
       })),
       toDOM(node) {
         return ["h" + node.attrs.level, bagToDOM(node), 0];
@@ -15150,7 +17157,7 @@ var AshokanBundle = (() => {
       content: "block+",
       defining: true,
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "blockquote", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "blockquote", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["blockquote", bagToDOM(node), 0];
       }
@@ -15165,9 +17172,9 @@ var AshokanBundle = (() => {
       parseDOM: [{
         tag: "pre",
         preserveWhitespace: "full",
-        getAttrs: (d) => {
-          const code = d.querySelector(":scope > code");
-          return { attrs: bagFromDOM(d), codeAttrs: code ? bagFromDOM(code) : {} };
+        getAttrs: (d2) => {
+          const code = d2.querySelector(":scope > code");
+          return { attrs: bagFromDOM(d2), codeAttrs: code ? bagFromDOM(code) : {} };
         }
       }],
       toDOM(node) {
@@ -15178,7 +17185,7 @@ var AshokanBundle = (() => {
       group: "block",
       content: "list_item+",
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "ol", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "ol", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["ol", bagToDOM(node), 0];
       }
@@ -15187,7 +17194,7 @@ var AshokanBundle = (() => {
       group: "block",
       content: "list_item+",
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "ul", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "ul", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["ul", bagToDOM(node), 0];
       }
@@ -15196,7 +17203,7 @@ var AshokanBundle = (() => {
       content: "paragraph block*",
       defining: true,
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "li", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "li", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["li", bagToDOM(node), 0];
       }
@@ -15204,7 +17211,7 @@ var AshokanBundle = (() => {
     horizontal_rule: {
       group: "block",
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "hr", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "hr", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["hr", bagToDOM(node)];
       }
@@ -15218,7 +17225,7 @@ var AshokanBundle = (() => {
       attrs: { tag: { default: "div" }, attrs: { default: {} } },
       parseDOM: CONTAINER_TAGS.map((tag) => ({
         tag,
-        getAttrs: (d) => ({ tag, attrs: bagFromDOM(d) })
+        getAttrs: (d2) => ({ tag, attrs: bagFromDOM(d2) })
       })),
       toDOM(node) {
         return [node.attrs.tag, bagToDOM(node), 0];
@@ -15229,7 +17236,7 @@ var AshokanBundle = (() => {
       inline: true,
       draggable: true,
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "img", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "img", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["img", bagToDOM(node)];
       }
@@ -15238,7 +17245,7 @@ var AshokanBundle = (() => {
       group: "block",
       content: "inline*",
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "figcaption", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "figcaption", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(node) {
         return ["figcaption", bagToDOM(node), 0];
       }
@@ -15261,7 +17268,7 @@ var AshokanBundle = (() => {
       attrs: { html: { default: "" } },
       parseDOM: [{
         tag: "ashokan-raw",
-        getAttrs: (d) => ({ html: decodeURIComponent(d.getAttribute("data-html") || "") })
+        getAttrs: (d2) => ({ html: decodeURIComponent(d2.getAttribute("data-html") || "") })
       }],
       toDOM(node) {
         return rawElementFor(node.attrs.html, false);
@@ -15275,7 +17282,7 @@ var AshokanBundle = (() => {
       attrs: { html: { default: "" } },
       parseDOM: [{
         tag: "ashokan-raw-inline",
-        getAttrs: (d) => ({ html: decodeURIComponent(d.getAttribute("data-html") || "") })
+        getAttrs: (d2) => ({ html: decodeURIComponent(d2.getAttribute("data-html") || "") })
       }],
       toDOM(node) {
         return rawElementFor(node.attrs.html, true);
@@ -15294,7 +17301,7 @@ var AshokanBundle = (() => {
     link: {
       attrs: { attrs: { default: {} } },
       inclusive: false,
-      parseDOM: [{ tag: "a", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "a", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(mark) {
         return ["a", bagToDOM(mark), 0];
       }
@@ -15302,8 +17309,8 @@ var AshokanBundle = (() => {
     strong: {
       attrs: { attrs: { default: {} } },
       parseDOM: [
-        { tag: "strong", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) },
-        { tag: "b", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }
+        { tag: "strong", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) },
+        { tag: "b", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }
       ],
       toDOM(mark) {
         return ["strong", bagToDOM(mark), 0];
@@ -15312,8 +17319,8 @@ var AshokanBundle = (() => {
     em: {
       attrs: { attrs: { default: {} } },
       parseDOM: [
-        { tag: "em", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) },
-        { tag: "i", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }
+        { tag: "em", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) },
+        { tag: "i", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }
       ],
       toDOM(mark) {
         return ["em", bagToDOM(mark), 0];
@@ -15321,14 +17328,14 @@ var AshokanBundle = (() => {
     },
     code: {
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "code", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "code", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(mark) {
         return ["code", bagToDOM(mark), 0];
       }
     },
     underline: {
       attrs: { attrs: { default: {} } },
-      parseDOM: [{ tag: "u", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "u", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(mark) {
         return ["u", bagToDOM(mark), 0];
       }
@@ -15337,7 +17344,7 @@ var AshokanBundle = (() => {
       attrs: { attrs: { default: {} } },
       parseDOM: ["s", "strike", "del"].map((tag) => ({
         tag,
-        getAttrs: (d) => ({ attrs: bagFromDOM(d) })
+        getAttrs: (d2) => ({ attrs: bagFromDOM(d2) })
       })),
       toDOM(mark) {
         return ["s", bagToDOM(mark), 0];
@@ -15347,7 +17354,7 @@ var AshokanBundle = (() => {
     span: {
       attrs: { attrs: { default: {} } },
       excludes: "",
-      parseDOM: [{ tag: "span", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+      parseDOM: [{ tag: "span", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
       toDOM(mark) {
         return ["span", bagToDOM(mark), 0];
       }
@@ -15358,14 +17365,14 @@ var AshokanBundle = (() => {
       excludes: "",
       parseDOM: ["sub", "sup", "small", "mark", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q"].map((tag) => ({
         tag,
-        getAttrs: (d) => ({ tag, attrs: bagFromDOM(d) })
+        getAttrs: (d2) => ({ tag, attrs: bagFromDOM(d2) })
       })),
       toDOM(mark) {
         return [mark.attrs.tag, bagToDOM(mark), 0];
       }
     }
   };
-  var tables = tableNodes({
+  var tables2 = tableNodes({
     tableGroup: "block",
     cellContent: "block+",
     cellAttributes: {
@@ -15380,15 +17387,15 @@ var AshokanBundle = (() => {
       }
     }
   });
-  tables.table = {
-    ...tables.table,
+  tables2.table = {
+    ...tables2.table,
     attrs: { attrs: { default: {} } },
-    parseDOM: [{ tag: "table", getAttrs: (d) => ({ attrs: bagFromDOM(d) }) }],
+    parseDOM: [{ tag: "table", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
     toDOM(node) {
       return ["table", bagToDOM(node), 0];
     }
   };
-  Object.assign(nodes, tables);
+  Object.assign(nodes, tables2);
   var schema = new Schema({ nodes, marks });
   var KNOWN_TAGS = /* @__PURE__ */ new Set([
     "p",
@@ -15465,8 +17472,8 @@ var AshokanBundle = (() => {
     "sub",
     "sup"
   ]);
-  function preprocess(root) {
-    for (const child of Array.from(root.children)) {
+  function preprocess(root2) {
+    for (const child of Array.from(root2.children)) {
       const tag = child.tagName.toLowerCase();
       if (KNOWN_TAGS.has(tag)) {
         preprocess(child);
@@ -15531,7 +17538,7 @@ var AshokanBundle = (() => {
     const img = document.createElement("img");
     const applyAttrs = (n) => {
       for (const a of Array.from(img.attributes)) img.removeAttribute(a.name);
-      for (const [k, v] of Object.entries(n.attrs.attrs || {})) img.setAttribute(k, v);
+      for (const [k, v2] of Object.entries(n.attrs.attrs || {})) img.setAttribute(k, v2);
     };
     applyAttrs(node);
     const handle = document.createElement("span");
@@ -15548,9 +17555,9 @@ var AshokanBundle = (() => {
       const up = () => {
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
-        const w = Math.round(img.getBoundingClientRect().width);
+        const w2 = Math.round(img.getBoundingClientRect().width);
         img.style.width = "";
-        const attrs = { ...current.attrs.attrs, width: String(w) };
+        const attrs = { ...current.attrs.attrs, width: String(w2) };
         delete attrs.height;
         view2.dispatch(view2.state.tr.setNodeMarkup(getPos(), null, { attrs }));
       };
@@ -15585,7 +17592,7 @@ var AshokanBundle = (() => {
         textblockTypeInputRule(
           /^(#{1,6})\s$/,
           schema.nodes.heading,
-          (m) => ({ level: m[1].length })
+          (m2) => ({ level: m2[1].length })
         ),
         textblockTypeInputRule(/^```$/, schema.nodes.code_block),
         wrappingInputRule(/^\s*>\s$/, schema.nodes.blockquote),
@@ -15596,15 +17603,31 @@ var AshokanBundle = (() => {
   }
   var view = null;
   var loading = false;
+  var isMarkdownDoc = false;
+  var turndown = new TurndownService({
+    headingStyle: "atx",
+    codeBlockStyle: "fenced",
+    emDelimiter: "*"
+  });
+  turndown.use(gfm);
+  turndown.keep(["figure", "figcaption", "details", "summary", "ins", "mark", "u", "sub", "sup", "kbd"]);
   function post(type, payload) {
     try {
       window.webkit.messageHandlers.ashokan.postMessage({ type, ...payload });
     } catch (e) {
     }
   }
+  function wordCount(doc3) {
+    const text = doc3.textBetween(0, doc3.content.size, " ", " ");
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    return words.length;
+  }
   function notifyChange(state) {
     if (loading) return;
-    post("docChanged", { bodyHTML: serializeBodyHTML(state.doc) });
+    const bodyHTML = serializeBodyHTML(state.doc);
+    const payload = { bodyHTML, words: wordCount(state.doc) };
+    if (isMarkdownDoc) payload.markdown = turndown.turndown(bodyHTML);
+    post("docChanged", payload);
   }
   function editorKeymap() {
     return keymap({
@@ -15705,7 +17728,7 @@ var AshokanBundle = (() => {
       if (name.startsWith("data-ashokan")) continue;
       body.removeAttribute(name);
     }
-    for (const [k, v] of Object.entries(attrs || {})) body.setAttribute(k, v);
+    for (const [k, v2] of Object.entries(attrs || {})) body.setAttribute(k, v2);
   }
   function run2(command) {
     if (!view) return;
@@ -15713,20 +17736,27 @@ var AshokanBundle = (() => {
     command(view.state, view.dispatch, view);
   }
   window.Ashokan = {
-    // payload: { bodyHTML, headHTML, bodyAttrs: {..}, hasOwnStyles: bool }
+    // payload: { bodyHTML | markdown, headHTML, bodyAttrs: {..},
+    //            hasOwnStyles: bool, isMarkdown: bool }
     loadDocument(payload) {
       loading = true;
       try {
+        isMarkdownDoc = !!payload.isMarkdown;
+        const bodyHTML = isMarkdownDoc ? g.parse(payload.markdown || "", { gfm: true }) : payload.bodyHTML || "";
         applyHeadHTML(payload.headHTML || "");
         applyBodyAttrs(payload.bodyAttrs || {});
-        document.body.classList.toggle("ashokan-default-theme", !payload.hasOwnStyles);
-        mount(parseBodyHTML(payload.bodyHTML || ""));
+        document.body.classList.toggle("ashokan-default-theme", isMarkdownDoc || !payload.hasOwnStyles);
+        mount(parseBodyHTML(bodyHTML));
       } finally {
         loading = false;
       }
+      if (view) post("stats", { words: wordCount(view.state.doc) });
     },
     getBodyHTML() {
       return view ? serializeBodyHTML(view.state.doc) : "";
+    },
+    getMarkdown() {
+      return view ? turndown.turndown(serializeBodyHTML(view.state.doc)) : "";
     },
     bold() {
       run2(toggleMark(schema.marks.strong));
