@@ -1,4 +1,5 @@
 import Cocoa
+import UniformTypeIdentifiers
 
 final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     let editorVC = EditorViewController()
@@ -129,6 +130,105 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         }
     }
 
+    // MARK: - Insert: images and tables
+
+    @objc func insertImage(_ sender: Any?) {
+        guard let window else { return }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.message = "Choose an image to embed in the document"
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            self.embedImage(from: url)
+        }
+    }
+
+    private func embedImage(from url: URL) {
+        guard let data = try? Data(contentsOf: url) else { return }
+        let proceed = {
+            let mime = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "image/png"
+            let src = "data:\(mime);base64,\(data.base64EncodedString())"
+            let alt = url.deletingPathExtension().lastPathComponent
+            self.editorVC.webView.evaluateJavaScript(
+                "window.Ashokan.insertImage(\(Self.json(src)), \(Self.json(alt)));"
+            )
+        }
+        if data.count > 8_000_000, let window {
+            let alert = NSAlert()
+            alert.messageText = "Large Image"
+            alert.informativeText = "This image is \(data.count / 1_000_000) MB and will be embedded directly in the HTML file. Embed anyway?"
+            alert.addButton(withTitle: "Embed")
+            alert.addButton(withTitle: "Cancel")
+            alert.beginSheetModal(for: window) { response in
+                if response == .alertFirstButtonReturn { proceed() }
+            }
+        } else {
+            proceed()
+        }
+    }
+
+    private static func json(_ s: String) -> String {
+        let data = try! JSONSerialization.data(withJSONObject: s, options: [.fragmentsAllowed])
+        return String(data: data, encoding: .utf8)!
+    }
+
+    @objc func insertTable(_ sender: NSMenuItem) {
+        if sender.tag > 0 {
+            editorVC.webView.evaluateJavaScript(
+                "window.Ashokan.insertTable(\(sender.tag / 100), \(sender.tag % 100));")
+        } else {
+            promptCustomTableSize()
+        }
+    }
+
+    private func promptCustomTableSize() {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "Insert Table"
+        alert.addButton(withTitle: "Insert")
+        alert.addButton(withTitle: "Cancel")
+        let rows = NSTextField(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
+        rows.stringValue = "3"
+        let cols = NSTextField(frame: NSRect(x: 0, y: 0, width: 60, height: 24))
+        cols.stringValue = "3"
+        let stack = NSStackView(views: [NSTextField(labelWithString: "Rows:"), rows,
+                                        NSTextField(labelWithString: "Columns:"), cols])
+        stack.orientation = .horizontal
+        stack.frame = NSRect(x: 0, y: 0, width: 280, height: 28)
+        alert.accessoryView = stack
+        alert.window.initialFirstResponder = rows
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            let r = max(2, min(50, Int(rows.stringValue) ?? 3))
+            let c = max(1, min(20, Int(cols.stringValue) ?? 3))
+            self?.editorVC.webView.evaluateJavaScript("window.Ashokan.insertTable(\(r), \(c));")
+        }
+    }
+
+    @objc func tableCommand(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        editorVC.call("tableCommand", argument: name)
+    }
+
+    @objc func alignImage(_ sender: NSMenuItem) {
+        guard let mode = sender.representedObject as? String else { return }
+        editorVC.call("alignImage", argument: mode)
+    }
+
+    // MARK: - PDF export
+
+    @objc func exportPDF(_ sender: Any?) {
+        guard let window else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = doc.displayName
+            .replacingOccurrences(of: ".html", with: "") + ".pdf"
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            self.editorVC.exportPDF(to: url)
+        }
+    }
+
     @objc private func styleChanged(_ sender: NSPopUpButton) {
         switch sender.indexOfSelectedItem {
         case 0: fmtH1(sender)
@@ -178,13 +278,16 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         static let bulletList = NSToolbarItem.Identifier("ashokan.bulletList")
         static let orderedList = NSToolbarItem.Identifier("ashokan.orderedList")
         static let blockquote = NSToolbarItem.Identifier("ashokan.blockquote")
+        static let image = NSToolbarItem.Identifier("ashokan.image")
+        static let table = NSToolbarItem.Identifier("ashokan.table")
         static let source = NSToolbarItem.Identifier("ashokan.source")
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [ItemID.style, .space,
          ItemID.bold, ItemID.italic, ItemID.code, ItemID.link, .space,
-         ItemID.bulletList, ItemID.orderedList, ItemID.blockquote,
+         ItemID.bulletList, ItemID.orderedList, ItemID.blockquote, .space,
+         ItemID.image, ItemID.table,
          .flexibleSpace, ItemID.source]
     }
 
@@ -223,11 +326,67 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
             return button(identifier, symbol: "list.number", label: "Numbered List", action: #selector(fmtOrderedList(_:)))
         case ItemID.blockquote:
             return button(identifier, symbol: "text.quote", label: "Blockquote", action: #selector(fmtBlockquote(_:)))
+        case ItemID.image:
+            return button(identifier, symbol: "photo", label: "Insert Image", action: #selector(insertImage(_:)))
+        case ItemID.table:
+            let item = NSMenuToolbarItem(itemIdentifier: identifier)
+            item.image = NSImage(systemSymbolName: "tablecells", accessibilityDescription: "Table")
+            item.label = "Table"
+            item.toolTip = "Insert or edit a table"
+            item.showsIndicator = true
+            item.menu = Self.tableMenu(target: self)
+            return item
         case ItemID.source:
             return button(identifier, symbol: "curlybraces", label: "Source", action: #selector(toggleSourcePane(_:)))
         default:
             return nil
         }
+    }
+
+    /// The table menu used by both the toolbar dropdown and the menu bar.
+    /// Pass nil as target to dispatch through the responder chain.
+    static func tableMenu(target: AnyObject?) -> NSMenu {
+        let menu = NSMenu(title: "Table")
+
+        let insert = NSMenuItem(title: "Insert Table", action: nil, keyEquivalent: "")
+        let sizes = NSMenu(title: "Insert Table")
+        for (rows, cols) in [(2, 2), (3, 3), (4, 4), (5, 5)] {
+            let item = sizes.addItem(withTitle: "\(rows) × \(cols)",
+                                     action: #selector(insertTable(_:)), keyEquivalent: "")
+            item.tag = rows * 100 + cols
+            item.target = target
+        }
+        sizes.addItem(.separator())
+        let custom = sizes.addItem(withTitle: "Custom…",
+                                   action: #selector(insertTable(_:)), keyEquivalent: "")
+        custom.tag = 0
+        custom.target = target
+        insert.submenu = sizes
+        menu.addItem(insert)
+        menu.addItem(.separator())
+
+        let commands: [(String, String)] = [
+            ("Add Row Above", "addRowBefore"),
+            ("Add Row Below", "addRowAfter"),
+            ("Add Column Before", "addColumnBefore"),
+            ("Add Column After", "addColumnAfter"),
+            ("", ""),
+            ("Delete Row", "deleteRow"),
+            ("Delete Column", "deleteColumn"),
+            ("Delete Table", "deleteTable"),
+            ("", ""),
+            ("Merge Cells", "mergeCells"),
+            ("Split Cell", "splitCell"),
+            ("Toggle Header Row", "toggleHeaderRow"),
+        ]
+        for (title, command) in commands {
+            if title.isEmpty { menu.addItem(.separator()); continue }
+            let item = menu.addItem(withTitle: title,
+                                    action: #selector(tableCommand(_:)), keyEquivalent: "")
+            item.representedObject = command
+            item.target = target
+        }
+        return menu
     }
 
     private func button(

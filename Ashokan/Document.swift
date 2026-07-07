@@ -18,6 +18,7 @@ final class Document: NSDocument {
     }
 
     override func makeWindowControllers() {
+        WelcomeWindowController.existing?.close()
         let wc = DocumentWindowController(document: self)
         addWindowController(wc)
     }

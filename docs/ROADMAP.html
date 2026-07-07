@@ -36,7 +36,7 @@
 <li><strong>The killer workflow:</strong> Claude Code or Codex proposes edits to a memo as <code>ins</code>/<code>del</code> markup; Brant opens it in Ashokan and accepts or rejects each change with a click. Human-in-the-loop document collaboration with AI agents, in an open format.</li>
 </ul>
 
-<h2>2. Images &amp; tables — full word-processor competence</h2>
+<h2>2. Images &amp; tables — full word-processor competence <small>✅ shipped July 7</small></h2>
 <h3>Images</h3>
 <ul>
 <li>Insert via toolbar/menu, drag-and-drop from Finder, or paste from clipboard.</li>
@@ -51,7 +51,7 @@
 <li>Fidelity: preserve <code>&lt;colgroup&gt;</code> and <code>&lt;caption&gt;</code> (currently dropped inside tables).</li>
 </ul>
 
-<h2>3. PDF export — print-quality pagination</h2>
+<h2>3. PDF export — print-quality pagination <small>✅ shipped July 7 (page numbers still to come)</small></h2>
 <p>WebKit already knows how to print HTML; the craft is in the pagination stylesheet Ashokan injects at export time:</p>
 <ul>
 <li><code>break-inside: avoid</code> on images, figures, tables, and code blocks — nothing splits across a page.</li>
@@ -61,7 +61,7 @@
 <li>Export sheet: paper size, margins, page numbers on/off, then straight to a PDF that looks like it came from a word processor.</li>
 </ul>
 
-<h2>4. Recent files &amp; launcher</h2>
+<h2>4. Recent files &amp; launcher <small>✅ shipped July 7</small></h2>
 <p>Open Ashokan → a welcome window (when no document is open): a grid of recently edited files, each card showing a <strong>live-rendered thumbnail</strong> of the document, the filename, and beneath it the dimmed file path and last-opened date. Click to open. Thumbnails are WKWebView snapshots cached by path + modification time, so the grid is instant.</p>
 <ul>
 <li>File &gt; Open Recent already works (wired this session).</li>

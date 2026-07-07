@@ -29,13 +29,13 @@
   "updated": "2026-07-07",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
-  "summary": "v0.1 built, visually verified (screenshots), launch bugs fixed: NSDocument-based AppKit app with WKWebView+ProseMirror WYSIWYG pane and toggleable native source pane (⌘/). Lossless round-trip works (11/11 headless fidelity checks). Demo memo renders with its own stylesheet in a native window with full toolbar. Roadmap brainstormed with Brant → docs/ROADMAP.html: review mode (tracked changes as standard ins/del + comments), images/tables, print-quality PDF export, recents launcher with thumbnails, iOS companion via iCloud Drive.",
+  "summary": "v0.2: the commute build-out. Everything from the July 7 brainstorm except review mode and iOS is now shipped and verified: images (insert/paste/drag, data-URI embed, drag-resize, alignment, editable figcaption), full table editing (insert sizes, row/col/merge/header commands, draggable column widths), PDF export with print-quality pagination (⌥⌘P), and the Welcome launcher with live-rendered recent-file thumbnails + name + path (recents persist via our own store since sharedfilelistd ignores ad-hoc builds). build.sh now installs to /Applications. Round-trip fidelity test: 14/14.",
   "next": [
-    { "text": "Brant: try the app (it's open with samples/demo-memo.html) and pick the first roadmap feature to build. Recommended order: images/tables → recents launcher → PDF export → review mode → iOS.", "priority": "high" },
-    { "text": "Images & tables: insert/drag/paste images (data-URI default), figure/figcaption, table grid picker + row/col/merge commands.", "priority": "med" },
-    { "text": "Recents launcher: welcome window with thumbnail cards (WKWebView snapshots), filename + path + date.", "priority": "med" },
-    { "text": "PDF export with pagination CSS (break-inside: avoid, heading break-after: avoid, @page).", "priority": "med" },
-    { "text": "Review mode: Suggesting-mode ProseMirror plugin writing standard ins/del markup, comments as mark+title+JSON island, Review toolbar with accept/reject.", "priority": "med" }
+    { "text": "Brant: launch from /Applications (Spotlight → Ashokan), play with images/tables/PDF export, report first impressions.", "priority": "high" },
+    { "text": "Review mode: Suggesting-mode ProseMirror plugin writing standard ins/del markup, comments as mark+title+JSON island, Review toolbar with accept/reject.", "priority": "high" },
+    { "text": "Preserve colgroup and table caption; emit real colgroup for column widths.", "priority": "med" },
+    { "text": "Find & replace across both panes; source-pane syntax highlighting.", "priority": "med" },
+    { "text": "PDF page numbers/headers; QuickLook thumbnail extension.", "priority": "med" }
   ],
   "open_questions": [
     "Distribution: direct download with Developer ID signing, or personal use only for now?",

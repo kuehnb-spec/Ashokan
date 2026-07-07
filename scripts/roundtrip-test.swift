@@ -31,6 +31,7 @@ let y = 2</code></pre>
 <div class="callout" data-kind="warn"><p>Known container with attributes.</p></div>
 <details open><summary>Unknown island</summary><p>Must survive verbatim.</p></details>
 <p>Inline unknown: <ruby>漢<rt>kan</rt></ruby> stays.</p>
+<figure class="shot"><img src="pic.png" width="320" alt="A picture"><figcaption>An editable caption</figcaption></figure>
 """
 
 var checks: [(String, (String) -> Bool)] = [
@@ -46,6 +47,9 @@ var checks: [(String, (String) -> Bool)] = [
     // Boolean attrs normalize to open="" — spec-equivalent, DOM-serialization-exact.
     ("details island survives", { $0.contains("<details open=\"\"><summary>Unknown island</summary><p>Must survive verbatim.</p></details>") }),
     ("inline ruby island survives", { $0.contains("<ruby>漢<rt>kan</rt></ruby>") }),
+    ("figure keeps class", { $0.contains("<figure class=\"shot\">") }),
+    ("figcaption is editable (not an island) and keeps text", { $0.contains("<figcaption>An editable caption</figcaption>") }),
+    ("image keeps width and alt", { $0.contains("width=\"320\"") && $0.contains("alt=\"A picture\"") }),
 ]
 
 final class Harness: NSObject, WKScriptMessageHandler {

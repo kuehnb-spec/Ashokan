@@ -2,34 +2,37 @@ import Cocoa
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // Instantiating our controller first makes it the shared instance.
+        _ = AshokanDocumentController()
         NSApp.mainMenu = buildMainMenu()
     }
 
-    private var launchCompletedAt: Date?
-
     func applicationDidFinishLaunching(_ notification: Notification) {
-        launchCompletedAt = Date()
-        // File-open events can arrive shortly after launch, so the automatic
-        // untitled window is suppressed below during that window; if nothing
-        // arrives, this provides the untitled document for a plain launch.
+        (NSDocumentController.shared as? AshokanDocumentController)?.restorePersistedRecents()
+        // On a plain launch (no file to open), show the Welcome launcher.
+        // The small delay lets file-open events delivered around launch win.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             if NSDocumentController.shared.documents.isEmpty {
-                NSLog("Ashokan-trace: fallback opening untitled")
-                try? NSDocumentController.shared.openUntitledDocumentAndDisplay(true)
+                WelcomeWindowController.shared.show()
             }
         }
     }
 
+    // The Welcome launcher replaces the automatic untitled window.
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
-        // False during launch (see above); true for later reactivations
-        // (e.g. Dock click with all windows closed).
-        guard let launchCompletedAt else {
-            NSLog("Ashokan-trace: shouldOpenUntitledFile before didFinishLaunching -> false")
+        false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows {
+            WelcomeWindowController.shared.show()
             return false
         }
-        let elapsed = Date().timeIntervalSince(launchCompletedAt)
-        NSLog("Ashokan-trace: shouldOpenUntitledFile at +%.2fs -> %@", elapsed, elapsed > 2.0 ? "true" : "false")
-        return elapsed > 2.0
+        return true
+    }
+
+    @objc func showWelcome(_ sender: Any?) {
+        WelcomeWindowController.shared.show()
     }
 
     // MARK: - Menu construction
@@ -79,6 +82,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         saveAs.keyEquivalentModifierMask = [.command, .shift]
         fileMenu.addItem(withTitle: "Revert to Saved",
                          action: #selector(NSDocument.revertToSaved(_:)), keyEquivalent: "")
+        fileMenu.addItem(.separator())
+        let exportPDF = fileMenu.addItem(withTitle: "Export as PDF…",
+                                         action: Selector(("exportPDF:")), keyEquivalent: "p")
+        exportPDF.keyEquivalentModifierMask = [.command, .option]
         mainMenu.addItem(submenu: fileMenu, title: "File")
 
         // Edit
@@ -94,6 +101,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         editMenu.addItem(withTitle: "Select All",
                          action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         mainMenu.addItem(submenu: editMenu, title: "Edit")
+
+        // Insert
+        let insertMenu = NSMenu(title: "Insert")
+        let insertImage = insertMenu.addItem(withTitle: "Image…",
+                                             action: Selector(("insertImage:")), keyEquivalent: "i")
+        insertImage.keyEquivalentModifierMask = [.command, .shift]
+        insertMenu.addItem(withTitle: "Horizontal Rule",
+                           action: Selector(("fmtHorizontalRule:")), keyEquivalent: "")
+        mainMenu.addItem(submenu: insertMenu, title: "Insert")
+
+        // Table (also available from the toolbar's table dropdown)
+        mainMenu.addItem(submenu: DocumentWindowController.tableMenu(target: nil), title: "Table")
 
         // Format
         let formatMenu = NSMenu(title: "Format")
@@ -114,7 +133,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let quote = formatMenu.addItem(withTitle: "Blockquote", action: Selector(("fmtBlockquote:")), keyEquivalent: "'")
         quote.keyEquivalentModifierMask = [.command]
         addStyleItem(formatMenu, "Code Block", "fmtCodeBlock:", "c")
-        formatMenu.addItem(withTitle: "Horizontal Rule", action: Selector(("fmtHorizontalRule:")), keyEquivalent: "")
+        formatMenu.addItem(.separator())
+        let imageFormat = NSMenuItem(title: "Image", action: nil, keyEquivalent: "")
+        let imageSub = NSMenu(title: "Image")
+        for (title, mode) in [("Inline with Text", "inline"), ("Float Left", "left"),
+                              ("Float Right", "right"), ("Centered", "center")] {
+            let item = imageSub.addItem(withTitle: title,
+                                        action: Selector(("alignImage:")), keyEquivalent: "")
+            item.representedObject = mode
+        }
+        imageFormat.submenu = imageSub
+        formatMenu.addItem(imageFormat)
         formatMenu.addItem(.separator())
         formatMenu.addItem(withTitle: "Add Link…", action: Selector(("fmtLink:")), keyEquivalent: "k")
         mainMenu.addItem(submenu: formatMenu, title: "Format")
@@ -130,6 +159,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Window
         let windowMenu = NSMenu(title: "Window")
+        let welcome = windowMenu.addItem(withTitle: "Welcome to Ashokan",
+                                         action: #selector(showWelcome(_:)), keyEquivalent: "1")
+        welcome.keyEquivalentModifierMask = [.command, .shift]
+        welcome.target = self
+        windowMenu.addItem(.separator())
         windowMenu.addItem(withTitle: "Minimize",
                            action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Zoom",

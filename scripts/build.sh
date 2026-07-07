@@ -20,4 +20,10 @@ fi
 xcodegen
 xcodebuild -project Ashokan.xcodeproj -scheme Ashokan -configuration Debug \
   -derivedDataPath build build | tail -3
-echo "App: build/Build/Products/Debug/Ashokan.app"
+
+# Install where Spotlight, Finder, and the Dock can see it.
+DEST=/Applications/Ashokan.app
+[ -w /Applications ] || DEST="$HOME/Applications/Ashokan.app"
+mkdir -p "$(dirname "$DEST")"
+ditto build/Build/Products/Debug/Ashokan.app "$DEST"
+echo "Installed: $DEST"

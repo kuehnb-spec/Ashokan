@@ -9,7 +9,7 @@
 //    and returns body HTML.
 
 import { Schema, DOMParser as PMDOMParser, DOMSerializer } from "prosemirror-model"
-import { EditorState } from "prosemirror-state"
+import { EditorState, TextSelection } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { history, undo, redo } from "prosemirror-history"
 import { keymap } from "prosemirror-keymap"
@@ -20,7 +20,12 @@ import { wrapInList, splitListItem, liftListItem, sinkListItem } from "prosemirr
 import { inputRules, wrappingInputRule, textblockTypeInputRule } from "prosemirror-inputrules"
 import { dropCursor } from "prosemirror-dropcursor"
 import { gapCursor } from "prosemirror-gapcursor"
-import { tableNodes, tableEditing, goToNextCell } from "prosemirror-tables"
+import {
+  tableNodes, tableEditing, goToNextCell, columnResizing,
+  addColumnBefore, addColumnAfter, deleteColumn,
+  addRowBefore, addRowAfter, deleteRow,
+  mergeCells, splitCell, toggleHeaderRow, deleteTable,
+} from "prosemirror-tables"
 
 // ---------------------------------------------------------------------------
 // Attribute-bag helpers: capture ALL attributes of an element so we can
@@ -150,6 +155,14 @@ const nodes = {
     attrs: { attrs: { default: {} } },
     parseDOM: [{ tag: "img", getAttrs: d => ({ attrs: bagFromDOM(d) }) }],
     toDOM(node) { return ["img", bagToDOM(node)] },
+  },
+
+  figure_caption: {
+    group: "block",
+    content: "inline*",
+    attrs: { attrs: { default: {} } },
+    parseDOM: [{ tag: "figcaption", getAttrs: d => ({ attrs: bagFromDOM(d) }) }],
+    toDOM(node) { return ["figcaption", bagToDOM(node), 0] },
   },
 
   hard_break: {
@@ -295,7 +308,7 @@ const schema = new Schema({ nodes, marks })
 
 const KNOWN_TAGS = new Set([
   "p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "code",
-  "ol", "ul", "li", "hr", "img", "br",
+  "ol", "ul", "li", "hr", "img", "br", "figcaption",
   "table", "thead", "tbody", "tfoot", "tr", "th", "td",
   "a", "strong", "b", "em", "i", "u", "s", "strike", "del", "span",
   "sub", "sup", "small", "mark", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q",
@@ -396,6 +409,68 @@ function rawNodeView(node) {
   return { dom }
 }
 
+// Image node view: renders the img plus a corner drag-handle that writes the
+// chosen width back into the node's attribute bag (plain HTML width attr, so
+// it renders identically outside the editor).
+function imageNodeView(node, view, getPos) {
+  let current = node
+  const wrap = document.createElement("span")
+  wrap.className = "ashokan-image"
+  const img = document.createElement("img")
+  const applyAttrs = n => {
+    for (const a of Array.from(img.attributes)) img.removeAttribute(a.name)
+    for (const [k, v] of Object.entries(n.attrs.attrs || {})) img.setAttribute(k, v)
+  }
+  applyAttrs(node)
+  const handle = document.createElement("span")
+  handle.className = "ashokan-image-handle"
+  wrap.append(img, handle)
+
+  handle.addEventListener("mousedown", e => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startW = img.getBoundingClientRect().width
+    const move = ev => {
+      img.style.width = Math.max(40, startW + ev.clientX - startX) + "px"
+    }
+    const up = () => {
+      document.removeEventListener("mousemove", move)
+      document.removeEventListener("mouseup", up)
+      const w = Math.round(img.getBoundingClientRect().width)
+      img.style.width = ""
+      const attrs = { ...current.attrs.attrs, width: String(w) }
+      delete attrs.height
+      view.dispatch(view.state.tr.setNodeMarkup(getPos(), null, { attrs }))
+    }
+    document.addEventListener("mousemove", move)
+    document.addEventListener("mouseup", up)
+  })
+
+  return {
+    dom: wrap,
+    update(n) {
+      if (n.type !== current.type) return false
+      current = n
+      applyAttrs(n)
+      return true
+    },
+  }
+}
+
+function insertImageFile(file, view) {
+  if (!file || !file.type.startsWith("image/")) return false
+  const reader = new FileReader()
+  reader.onload = () => {
+    const attrs = { src: reader.result }
+    if (file.name && !file.name.startsWith("image.")) attrs.alt = file.name.replace(/\.[a-z]+$/i, "")
+    const node = schema.nodes.image.create({ attrs })
+    view.dispatch(view.state.tr.replaceSelectionWith(node).scrollIntoView())
+  }
+  reader.readAsDataURL(file)
+  return true
+}
+
 // ---------------------------------------------------------------------------
 // Input rules: Markdown-style shortcuts while typing.
 // ---------------------------------------------------------------------------
@@ -463,6 +538,7 @@ function createState(doc) {
       history(),
       dropCursor(),
       gapCursor(),
+      columnResizing(),
       tableEditing(),
     ],
   })
@@ -476,12 +552,37 @@ function mount(doc) {
     nodeViews: {
       html_block: rawNodeView,
       html_inline: rawNodeView,
+      image: imageNodeView,
     },
     transformPastedHTML(html) {
       const container = document.createElement("div")
       container.innerHTML = html
       preprocess(container)
       return container.innerHTML
+    },
+    handleDOMEvents: {
+      paste(view, event) {
+        for (const item of event.clipboardData?.items || []) {
+          if (item.type.startsWith("image/")) {
+            event.preventDefault()
+            insertImageFile(item.getAsFile(), view)
+            return true
+          }
+        }
+        return false
+      },
+      drop(view, event) {
+        const files = Array.from(event.dataTransfer?.files || [])
+          .filter(f => f.type.startsWith("image/"))
+        if (!files.length) return false
+        event.preventDefault()
+        const drop = view.posAtCoords({ left: event.clientX, top: event.clientY })
+        if (drop) {
+          view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(drop.pos))))
+        }
+        files.forEach(f => insertImageFile(f, view))
+        return true
+      },
     },
     dispatchTransaction(tr) {
       const newState = view.state.apply(tr)
@@ -556,6 +657,61 @@ window.Ashokan = {
   setLink(href) {
     if (!href) { run(toggleMark(schema.marks.link)); return }
     run(toggleMark(schema.marks.link, { attrs: { href } }))
+  },
+
+  insertImage(src, alt) {
+    const attrs = { src }
+    if (alt) attrs.alt = alt
+    run((state, dispatch) => {
+      dispatch(state.tr.replaceSelectionWith(schema.nodes.image.create({ attrs })).scrollIntoView())
+      return true
+    })
+  },
+
+  // mode: "inline" | "left" | "right" | "center"
+  alignImage(mode) {
+    if (!view) return
+    const { selection } = view.state
+    const node = selection.node
+    if (!node || node.type !== schema.nodes.image) return
+    const attrs = { ...node.attrs.attrs }
+    let style = (attrs.style || "")
+      .split(";").map(s => s.trim())
+      .filter(s => s && !/^(float|display|margin)\s*:/.test(s))
+      .join("; ")
+    const extra = {
+      inline: "",
+      left: "float: left; margin: 0.3em 1.2em 0.6em 0",
+      right: "float: right; margin: 0.3em 0 0.6em 1.2em",
+      center: "display: block; margin: 1em auto",
+    }[mode] || ""
+    style = [style, extra].filter(Boolean).join("; ")
+    if (style) attrs.style = style; else delete attrs.style
+    view.dispatch(view.state.tr.setNodeMarkup(selection.from, null, { attrs }))
+    view.focus()
+  },
+
+  insertTable(rows, cols) {
+    rows = Math.max(2, rows || 3)
+    cols = Math.max(1, cols || 3)
+    const { table, table_row, table_cell, table_header } = schema.nodes
+    const makeRow = cellType =>
+      table_row.create(null, Array.from({ length: cols }, () => cellType.createAndFill()))
+    const rowNodes = [makeRow(table_header)]
+    for (let r = 1; r < rows; r++) rowNodes.push(makeRow(table_cell))
+    run((state, dispatch) => {
+      dispatch(state.tr.replaceSelectionWith(table.create(null, rowNodes)).scrollIntoView())
+      return true
+    })
+  },
+
+  tableCommand(name) {
+    const commands = {
+      addColumnBefore, addColumnAfter, deleteColumn,
+      addRowBefore, addRowAfter, deleteRow,
+      mergeCells, splitCell, toggleHeaderRow, deleteTable,
+    }
+    if (commands[name]) run(commands[name])
   },
 
   undo() { run(undo) },

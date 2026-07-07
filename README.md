@@ -46,8 +46,9 @@ Ashokan never rewrites what you didn't edit.
 ## Building
 
 ```sh
-scripts/build.sh          # bundles the JS core, generates the Xcode project, builds
-open build/Build/Products/Debug/Ashokan.app
+scripts/build.sh          # bundles the JS core, generates the Xcode project,
+                          # builds, and installs to /Applications
+open -a Ashokan
 ```
 
 Requires Xcode; node + xcodegen via Homebrew. The built ProseMirror bundle
@@ -60,8 +61,17 @@ are strictly needed.
 swift scripts/roundtrip-test.swift   # headless fidelity checks on the real editing core
 ```
 
-## Editing niceties
+## Features
 
+- **Welcome launcher** — recent documents with live-rendered thumbnails,
+  filename, and path; click to open.
+- **Images** — insert from file (embedded as a data URI so the document stays
+  one self-contained file), paste or drag from anywhere, drag-corner resize,
+  inline/float/center alignment, editable `<figure>`/`<figcaption>`.
+- **Tables** — insert via Table menu or toolbar dropdown; add/delete rows and
+  columns, merge/split cells, header-row toggle, draggable column widths.
+- **PDF export** (⌥⌘P) — print-quality pagination: images, tables, and code
+  blocks never split across pages; headings stay with their text.
 - Markdown-style shortcuts while typing: `#` + space → heading, `-` + space →
   list, ` ``` ` → code block, `>` + space → blockquote.
 - ⌘B/⌘I/⌘U/⌘E marks, ⌘⌥1–4/⌘⌥0 block styles, ⌘K link, Tab between table cells.
@@ -69,10 +79,10 @@ swift scripts/roundtrip-test.swift   # headless fidelity checks on the real edit
 
 ## Roadmap
 
-- Table creation & row/column commands (editing existing tables already works)
+- Review mode: tracked changes as standard `<ins>`/`<del>`, comments, accept/reject
 - Preserve `<colgroup>` and table `caption`
-- Syntax highlighting in the source pane
-- Find & replace across both panes
+- Syntax highlighting in the source pane; find & replace across both panes
+- PDF page numbers/headers; QuickLook thumbnails in Finder
 - iOS companion (the editing core already runs in any WKWebView), files
   synced via iCloud Drive
 

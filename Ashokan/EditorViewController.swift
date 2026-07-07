@@ -77,6 +77,32 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
         call("focus")
     }
 
+    /// Paginated PDF export through the native print pipeline, so the
+    /// editor page's @media print rules (keep images/tables whole, keep
+    /// headings with their text) apply.
+    func exportPDF(to url: URL) {
+        let printInfo = NSPrintInfo()
+        printInfo.horizontalPagination = .fit
+        printInfo.verticalPagination = .automatic
+        printInfo.topMargin = 54
+        printInfo.bottomMargin = 54
+        printInfo.leftMargin = 54
+        printInfo.rightMargin = 54
+        printInfo.jobDisposition = .save
+        printInfo.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
+
+        let operation = webView.printOperation(with: printInfo)
+        operation.showsPrintPanel = false
+        operation.showsProgressPanel = true
+        // WKWebView's print view starts zero-sized; give it the page rect.
+        operation.view?.frame = NSRect(origin: .zero, size: printInfo.paperSize)
+        if let window = view.window {
+            operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+        } else {
+            operation.run()
+        }
+    }
+
     private static func jsonString(_ value: Any) -> String? {
         guard let data = try? JSONSerialization.data(
             withJSONObject: value,
