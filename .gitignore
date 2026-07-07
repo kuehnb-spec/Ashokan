@@ -1,0 +1,15 @@
+# Generated Xcode project (regenerate with `xcodegen` / scripts/build.sh)
+Ashokan.xcodeproj/
+# Generated Info.plist (xcodegen writes it from project.yml)
+Ashokan/Info.plist
+
+# Build products
+build/
+DerivedData/
+
+# JS dependencies (the built bundle Ashokan/Resources/editor.js IS committed)
+editor/node_modules/
+
+# macOS noise
+.DS_Store
+xcuserdata/

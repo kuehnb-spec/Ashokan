@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ashokan Demo Memo</title>
+<style>
+  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         color: #1c1e21; max-width: 46em; margin: 0 auto; padding: 48px 56px 120px; }
+  h1 { font-size: 2em; letter-spacing: -0.02em; border-bottom: 2px solid #1f6feb; padding-bottom: 0.3em; }
+  h2 { font-size: 1.35em; margin-top: 1.6em; color: #1f6feb; }
+  .meta { color: #667085; font-size: 0.9em; }
+  blockquote { border-left: 3px solid #1f6feb; margin: 1em 0; padding: 0.2em 1.2em; color: #475467; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th { background: #f0f4ff; text-align: left; }
+  th, td { border: 1px solid #d0d5dd; padding: 8px 14px; }
+  code { font: 0.88em ui-monospace, "SF Mono", Menlo, monospace; background: #f4f5f7;
+         border-radius: 4px; padding: 0.1em 0.4em; }
+  pre { background: #0f1115; color: #e6e8ed; border-radius: 8px; padding: 14px 18px;
+        font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; overflow-x: auto; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .callout { background: #fff8e6; border: 1px solid #f0d977; border-radius: 8px; padding: 12px 18px; }
+</style>
+</head>
+<body>
+<h1>Ashokan Demo Memo</h1>
+<p class="meta">A sample document of the kind Claude Code writes — styled headings, a table, code, and a callout.</p>
+
+<h2>Why this document exists</h2>
+<p>This memo exercises everything the v1 editor supports: <strong>bold</strong>, <em>italic</em>, <u>underline</u>, <code>inline code</code>, and <a href="https://en.wikipedia.org/wiki/Ashokan_Reservoir">links</a>.</p>
+
+<blockquote>
+<p>Edit me in the WYSIWYG pane, then flip to Source (⌘/) and confirm the markup stayed clean.</p>
+</blockquote>
+
+<h2>Status table</h2>
+<table>
+<thead>
+<tr><th>Area</th><th>State</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td>Round-trip</td><td>Testing</td><td>Head and unknown markup must survive byte-for-byte</td></tr>
+<tr><td>Tables</td><td>Editable</td><td>Tab moves between cells</td></tr>
+<tr><td>Code blocks</td><td>Editable</td><td>Whitespace preserved</td></tr>
+</tbody>
+</table>
+
+<h2>Lists</h2>
+<ul>
+<li>Type <code>#</code> then space for a heading (Markdown shortcuts work)</li>
+<li>Type <code>-</code> then space to start a list like this one</li>
+<li>Nested items
+<ul>
+<li>work too</li>
+</ul>
+</li>
+</ul>
+
+<h2>Code</h2>
+<pre><code>func hello() {
+    print("Ashokan says hi")
+}</code></pre>
+
+<h2>Preserved islands</h2>
+<div class="callout">
+<p>This div has a class the editor knows nothing about — its attributes and styling must survive editing.</p>
+</div>
+<details>
+<summary>This details/summary widget is an unknown element</summary>
+<p>It renders as a protected island: visible, movable, never mangled.</p>
+</details>
+</body>
+</html>
