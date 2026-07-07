@@ -5,8 +5,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = buildMainMenu()
     }
 
+    private var launchCompletedAt: Date?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        launchCompletedAt = Date()
+        // File-open events can arrive shortly after launch, so the automatic
+        // untitled window is suppressed below during that window; if nothing
+        // arrives, this provides the untitled document for a plain launch.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            if NSDocumentController.shared.documents.isEmpty {
+                NSLog("Ashokan-trace: fallback opening untitled")
+                try? NSDocumentController.shared.openUntitledDocumentAndDisplay(true)
+            }
+        }
+    }
+
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
-        true
+        // False during launch (see above); true for later reactivations
+        // (e.g. Dock click with all windows closed).
+        guard let launchCompletedAt else {
+            NSLog("Ashokan-trace: shouldOpenUntitledFile before didFinishLaunching -> false")
+            return false
+        }
+        let elapsed = Date().timeIntervalSince(launchCompletedAt)
+        NSLog("Ashokan-trace: shouldOpenUntitledFile at +%.2fs -> %@", elapsed, elapsed > 2.0 ? "true" : "false")
+        return elapsed > 2.0
     }
 
     // MARK: - Menu construction
@@ -39,6 +62,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                          action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         fileMenu.addItem(withTitle: "Open…",
                          action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
+        // AppKit recognizes this shape (submenu ending in clearRecentDocuments:)
+        // and populates it with the document controller's recents.
+        let openRecent = NSMenu(title: "Open Recent")
+        openRecent.addItem(withTitle: "Clear Menu",
+                           action: #selector(NSDocumentController.clearRecentDocuments(_:)),
+                           keyEquivalent: "")
+        fileMenu.addItem(submenu: openRecent, title: "Open Recent")
         fileMenu.addItem(.separator())
         fileMenu.addItem(withTitle: "Close",
                          action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")

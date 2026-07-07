@@ -22,6 +22,16 @@ final class Document: NSDocument {
         addWindowController(wc)
     }
 
+    // Once a document gains a file (first save), its window becomes restorable.
+    override var fileURL: URL? {
+        didSet {
+            let restorable = fileURL != nil
+            DispatchQueue.main.async { [weak self] in
+                self?.windowControllers.forEach { $0.window?.isRestorable = restorable }
+            }
+        }
+    }
+
     override func data(ofType typeName: String) throws -> Data {
         guard let data = model.assembled().data(using: .utf8) else {
             throw NSError(domain: NSCocoaErrorDomain, code: NSFileWriteInapplicableStringEncodingError)

@@ -19,7 +19,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         window.center()
         window.minSize = NSSize(width: 480, height: 300)
         self.init(window: window)
-        self.document = document
+        // NOTE: never assign self.document here — NSDocument.addWindowController
+        // skips (and never retains) a controller whose document is already set,
+        // and the whole window silently deallocates.
 
         let editorItem = NSSplitViewItem(viewController: editorVC)
         editorItem.minimumThickness = 320
@@ -32,6 +34,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         splitVC.addSplitViewItem(editorItem)
         splitVC.addSplitViewItem(sourceItem)
         window.contentViewController = splitVC
+        // Setting contentViewController resizes the window to the content's
+        // fitting size — which is ~zero for an unconstrained split view.
+        window.setContentSize(NSSize(width: 1080, height: 780))
+        window.center()
 
         let toolbar = NSToolbar(identifier: "AshokanToolbar")
         toolbar.delegate = self
@@ -40,7 +46,17 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         window.toolbar = toolbar
 
         wireUp()
-        loadEditor()
+    }
+
+    // The document arrives via NSDocument.addWindowController, after init.
+    private var editorLoaded = false
+    override var document: AnyObject? {
+        didSet {
+            if document != nil && !editorLoaded {
+                editorLoaded = true
+                loadEditor()
+            }
+        }
     }
 
     private func wireUp() {
@@ -61,6 +77,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     }
 
     private func loadEditor() {
+        // Untitled windows stay out of state restoration so a template-bearing
+        // "Untitled" doesn't get preserved as a draft and resurrected forever.
+        window?.isRestorable = doc.fileURL != nil
         editorVC.loadShell(baseURL: doc.fileURL?.deletingLastPathComponent())
         editorVC.loadDocument(doc.model)
     }
