@@ -28,9 +28,15 @@ xcodebuild -project Ashokan.xcodeproj -scheme Ashokan -configuration Debug \
   MARKETING_VERSION="$MARKETING_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   -derivedDataPath build build | tail -3
 
-# Install where Spotlight, Finder, and the Dock can see it.
+# Install where Spotlight, Finder, and the Dock can see it. Quit any running
+# copy first — replacing a live app bundle on disk can crash the running
+# instance later.
 DEST=/Applications/Ashokan.app
 [ -w /Applications ] || DEST="$HOME/Applications/Ashokan.app"
+if pgrep -qf "$DEST/Contents/MacOS/Ashokan"; then
+  osascript -e 'tell application "Ashokan" to quit' 2>/dev/null || true
+  sleep 2
+fi
 mkdir -p "$(dirname "$DEST")"
 ditto build/Build/Products/Debug/Ashokan.app "$DEST"
 echo "Installed: $DEST"
