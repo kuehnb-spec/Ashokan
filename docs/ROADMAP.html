@@ -89,6 +89,19 @@
 </tbody>
 </table>
 
+<h2>Learnings from FrankenMarkdown <small>(studied July 8 — Jeff Emanuel's Markdown→HTML/PDF engine)</small></h2>
+<p>Different species (headless compiler vs. our editor), but several concepts transfer. In priority order:</p>
+<ul>
+<li><strong>GFM task lists</strong> — agents write <code>- [ ]</code> checklists constantly; Ashokan should render them as real, clickable checkboxes (currently inert islands). Cheap, high value.</li>
+<li><strong>PDF export polish</strong> — set PDF title/author metadata; optional justified body with hyphenation (<code>-webkit-hyphens</code> in print CSS); document outline/bookmarks from headings (harder: WebKit print doesn't emit them; PDFKit post-process someday).</li>
+<li><strong>Dark-mode-aware default theme</strong> — our default/new-doc theme is light-only; add <code>prefers-color-scheme</code> support like FMD's output.</li>
+<li><strong>Mermaid rendering</strong> — FMD renders mermaid fences as SVG in HTML and PDF. Agent docs are full of mermaid; rendering (display-only, source preserved) would be a killer feature. Cost: ~1.5&nbsp;MB bundled mermaid.js.</li>
+<li><strong>Display-only syntax highlighting</strong> for code blocks (~15 languages) — view-layer decoration, never written into the file.</li>
+<li><strong>Agent-first CLI</strong> — FMD's <code>capabilities --json</code>/<code>robot-docs</code>/stable-exit-codes contract is the right shape. Ashokan analog: a small headless CLI (<code>ashokan export file.html --pdf</code>) so agents can produce PDFs without the GUI, plus a machine-readable capabilities block in AGENTS.md.</li>
+<li><strong>Fragment-URL sharing</strong> — FMD encodes whole documents into URL fragments (deflate+base64url, nothing touches a server). When the Ashokan website exists, a static viewer page could accept <code>#zdoc=</code> links: instant private doc sharing. Website-phase idea.</li>
+<li><strong>Timestamp determinism</strong> — FMD guarantees identical output bytes; our only nondeterminism is <code>data-ashokan-ts</code> on suggestions. Consider an option to omit timestamps for git-diff-friendly documents.</li>
+</ul>
+
 <blockquote>
 <p>Also on the someday list: find &amp; replace across both panes, source-pane syntax highlighting, document outline sidebar, columns/layout helpers, and a Developer ID–signed release build.</p>
 </blockquote>
