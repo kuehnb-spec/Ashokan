@@ -445,7 +445,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         let content = NSViewController()
         let textLabel = NSTextField(wrappingLabelWithString: text)
         textLabel.font = .systemFont(ofSize: 13)
-        textLabel.preferredMaxLayoutWidth = 260
+        textLabel.preferredMaxLayoutWidth = 300
 
         let authorLabel = NSTextField(labelWithString: author.isEmpty ? "Comment" : author)
         authorLabel.font = .systemFont(ofSize: 11, weight: .semibold)
@@ -453,24 +453,28 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
 
         let editButton = NSButton(title: "Edit…", target: self, action: #selector(editCommentFromPopover(_:)))
         editButton.bezelStyle = .accessoryBarAction
-        editButton.controlSize = .small
         let removeButton = NSButton(title: "Remove", target: self, action: #selector(removeCommentFromPopover(_:)))
         removeButton.bezelStyle = .accessoryBarAction
-        removeButton.controlSize = .small
         let buttons = NSStackView(views: [editButton, removeButton])
         buttons.orientation = .horizontal
-        buttons.spacing = 8
+        buttons.spacing = 10
 
         let stack = NSStackView(views: [authorLabel, textLabel, buttons])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 6
-        stack.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 12, right: 14)
+        stack.spacing = 8
+        stack.setCustomSpacing(12, after: textLabel)
+        stack.edgeInsets = NSEdgeInsets(top: 16, left: 18, bottom: 16, right: 18)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        textLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 300).isActive = true
+        stack.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
         content.view = stack
 
         let popover = NSPopover()
         popover.contentViewController = content
         popover.behavior = .transient
+        stack.layoutSubtreeIfNeeded()
+        popover.contentSize = stack.fittingSize
         popover.show(relativeTo: rect, of: editorVC.webView, preferredEdge: .maxY)
         commentPopover = popover
     }

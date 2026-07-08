@@ -818,6 +818,61 @@ function layoutCommentMargin() {
 
 window.addEventListener("resize", () => layoutCommentMargin())
 
+// ---------------------------------------------------------------------------
+// Hover chip: mousing over a tracked change offers accept/reject in place.
+// ---------------------------------------------------------------------------
+
+let hoverChip = null
+let hoverChange = null
+let hoverHideTimer = null
+
+function chipButton(label, tooltip, accept) {
+  const button = document.createElement("button")
+  button.textContent = label
+  button.title = tooltip
+  button.className = accept ? "ashokan-chip-accept" : "ashokan-chip-reject"
+  button.addEventListener("mousedown", event => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (hoverChange) resolveChange(hoverChange, accept)
+    hideHoverChip()
+  })
+  return button
+}
+
+function ensureHoverChip() {
+  if (hoverChip) return hoverChip
+  hoverChip = document.createElement("div")
+  hoverChip.id = "ashokan-change-chip"
+  hoverChip.append(
+    chipButton("✓", "Accept this change", true),
+    chipButton("✕", "Reject this change", false),
+  )
+  hoverChip.addEventListener("mouseenter", () => clearTimeout(hoverHideTimer))
+  hoverChip.addEventListener("mouseleave", scheduleHideHoverChip)
+  document.body.appendChild(hoverChip)
+  return hoverChip
+}
+
+function showHoverChip(element, change) {
+  hoverChange = change
+  const chip = ensureHoverChip()
+  const rect = element.getBoundingClientRect()
+  chip.style.display = "flex"
+  chip.style.left = Math.max(4, rect.left + window.scrollX) + "px"
+  chip.style.top = (rect.top + window.scrollY - 30) + "px"
+}
+
+function scheduleHideHoverChip() {
+  clearTimeout(hoverHideTimer)
+  hoverHideTimer = setTimeout(hideHoverChip, 300)
+}
+
+function hideHoverChip() {
+  if (hoverChip) hoverChip.style.display = "none"
+  hoverChange = null
+}
+
 function changeAtOrAfter(items, pos, wrap) {
   if (!items.length) return null
   return items.find(c => c.to > pos) || (wrap ? items[0] : null)
@@ -940,6 +995,24 @@ function mount(doc) {
       return true // rich paste can't be tracked; plain text was
     },
     handleDOMEvents: {
+      mouseover(view, event) {
+        const target = event.target instanceof Element ? event.target.closest("ins, del") : null
+        if (!target || !view.dom.contains(target)) return false
+        let pos
+        try { pos = view.posAtDOM(target, 0) } catch (e) { return false }
+        const change = collectChanges(view.state.doc)
+          .find(c => c.from <= pos && pos < c.to)
+        if (change) {
+          clearTimeout(hoverHideTimer)
+          showHoverChip(target, change)
+        }
+        return false
+      },
+      mouseout(view, event) {
+        const target = event.target instanceof Element ? event.target.closest("ins, del") : null
+        if (target) scheduleHideHoverChip()
+        return false
+      },
       paste(view, event) {
         for (const item of event.clipboardData?.items || []) {
           if (item.type.startsWith("image/")) {
@@ -969,6 +1042,7 @@ function mount(doc) {
       if (tr.docChanged) {
         notifyChange(newState)
         layoutCommentMargin()
+        hideHoverChip()   // positions are stale after any edit
       }
     },
   })

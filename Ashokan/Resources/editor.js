@@ -17874,6 +17874,51 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     }
   }
   window.addEventListener("resize", () => layoutCommentMargin());
+  var hoverChip = null;
+  var hoverChange = null;
+  var hoverHideTimer = null;
+  function chipButton(label, tooltip, accept) {
+    const button = document.createElement("button");
+    button.textContent = label;
+    button.title = tooltip;
+    button.className = accept ? "ashokan-chip-accept" : "ashokan-chip-reject";
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (hoverChange) resolveChange(hoverChange, accept);
+      hideHoverChip();
+    });
+    return button;
+  }
+  function ensureHoverChip() {
+    if (hoverChip) return hoverChip;
+    hoverChip = document.createElement("div");
+    hoverChip.id = "ashokan-change-chip";
+    hoverChip.append(
+      chipButton("\u2713", "Accept this change", true),
+      chipButton("\u2715", "Reject this change", false)
+    );
+    hoverChip.addEventListener("mouseenter", () => clearTimeout(hoverHideTimer));
+    hoverChip.addEventListener("mouseleave", scheduleHideHoverChip);
+    document.body.appendChild(hoverChip);
+    return hoverChip;
+  }
+  function showHoverChip(element, change) {
+    hoverChange = change;
+    const chip = ensureHoverChip();
+    const rect = element.getBoundingClientRect();
+    chip.style.display = "flex";
+    chip.style.left = Math.max(4, rect.left + window.scrollX) + "px";
+    chip.style.top = rect.top + window.scrollY - 30 + "px";
+  }
+  function scheduleHideHoverChip() {
+    clearTimeout(hoverHideTimer);
+    hoverHideTimer = setTimeout(hideHoverChip, 300);
+  }
+  function hideHoverChip() {
+    if (hoverChip) hoverChip.style.display = "none";
+    hoverChange = null;
+  }
   function changeAtOrAfter(items, pos, wrap2) {
     if (!items.length) return null;
     return items.find((c) => c.to > pos) || (wrap2 ? items[0] : null);
@@ -17994,6 +18039,27 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         return true;
       },
       handleDOMEvents: {
+        mouseover(view2, event) {
+          const target = event.target instanceof Element ? event.target.closest("ins, del") : null;
+          if (!target || !view2.dom.contains(target)) return false;
+          let pos;
+          try {
+            pos = view2.posAtDOM(target, 0);
+          } catch (e) {
+            return false;
+          }
+          const change = collectChanges(view2.state.doc).find((c) => c.from <= pos && pos < c.to);
+          if (change) {
+            clearTimeout(hoverHideTimer);
+            showHoverChip(target, change);
+          }
+          return false;
+        },
+        mouseout(view2, event) {
+          const target = event.target instanceof Element ? event.target.closest("ins, del") : null;
+          if (target) scheduleHideHoverChip();
+          return false;
+        },
         paste(view2, event) {
           for (const item of event.clipboardData?.items || []) {
             if (item.type.startsWith("image/")) {
@@ -18022,6 +18088,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         if (tr.docChanged) {
           notifyChange(newState);
           layoutCommentMargin();
+          hideHoverChip();
         }
       }
     });
