@@ -1,7 +1,7 @@
 import Cocoa
 import UniformTypeIdentifiers
 
-final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
+final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSMenuItemValidation {
     let editorVC = EditorViewController()
     let sourceVC = SourceViewController()
     private let splitVC = NSSplitViewController()
@@ -10,6 +10,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
     private var statusPathLabel: NSTextField!
     private var statusInfoLabel: NSTextField!
     private var lastWordCount = 0
+    private var pendingChanges = 0
+    private var pendingComments = 0
+    private var suggesting = false
+    private var suggestButton: NSButton!
 
     private var doc: Document { document as! Document }
 
@@ -106,6 +110,11 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
             if !self.sourceItem.isCollapsed && !self.sourceVC.isEditing {
                 self.sourceVC.setText(self.sourceText())
             }
+        }
+        editorVC.onReviewCounts = { [weak self] changes, comments in
+            self?.pendingChanges = changes
+            self?.pendingComments = comments
+            self?.updateStatusBar()
         }
         editorVC.onStats = { [weak self] words in
             self?.lastWordCount = words
@@ -220,6 +229,12 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
             }
         }
         parts.append("\(lastWordCount) word\(lastWordCount == 1 ? "" : "s")")
+        if pendingChanges > 0 {
+            parts.append("\(pendingChanges) suggestion\(pendingChanges == 1 ? "" : "s")")
+        }
+        if pendingComments > 0 {
+            parts.append("\(pendingComments) comment\(pendingComments == 1 ? "" : "s")")
+        }
         statusInfoLabel.stringValue = parts.joined(separator: "  ·  ")
     }
 
@@ -370,6 +385,69 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         }
     }
 
+    // MARK: - Review mode
+
+    @objc func toggleSuggesting(_ sender: Any?) {
+        suggesting.toggle()
+        suggestButton?.state = suggesting ? .on : .off
+        editorVC.call("setSuggesting", argument: suggesting)
+        editorVC.focusEditor()
+    }
+
+    @objc func reviewNextChange(_ sender: Any?) { editorVC.call("nextChange") }
+    @objc func reviewPreviousChange(_ sender: Any?) { editorVC.call("previousChange") }
+    @objc func reviewAcceptChange(_ sender: Any?) { editorVC.call("acceptChange") }
+    @objc func reviewRejectChange(_ sender: Any?) { editorVC.call("rejectChange") }
+    @objc func reviewAcceptAll(_ sender: Any?) { editorVC.call("acceptAllChanges") }
+    @objc func reviewRejectAll(_ sender: Any?) { editorVC.call("rejectAllChanges") }
+    @objc func reviewNextComment(_ sender: Any?) { editorVC.call("nextComment") }
+    @objc func reviewPreviousComment(_ sender: Any?) { editorVC.call("previousComment") }
+    @objc func reviewRemoveComment(_ sender: Any?) { editorVC.call("removeComment") }
+
+    @objc func reviewAddComment(_ sender: Any?) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "Add Comment"
+        alert.informativeText = "Comment on the selected text (visible on hover in any browser):"
+        alert.addButton(withTitle: "Add Comment")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 340, height: 60))
+        field.placeholderString = "Your comment…"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            let text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return }
+            self?.editorVC.call("addComment", argument: text)
+        }
+    }
+
+    @objc func reviewShowComment(_ sender: Any?) {
+        editorVC.webView.evaluateJavaScript("JSON.stringify(window.Ashokan.commentAtSelection())") { [weak self] result, _ in
+            guard let self, let window = self.window else { return }
+            let alert = NSAlert()
+            if let raw = result as? String,
+               let data = raw.data(using: .utf8),
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
+               let text = dict["text"] {
+                alert.messageText = dict["author"].flatMap { $0.isEmpty ? nil : "Comment — \($0)" } ?? "Comment"
+                alert.informativeText = text
+            } else {
+                alert.messageText = "No Comment Here"
+                alert.informativeText = "Place the cursor inside highlighted text to view its comment."
+            }
+            alert.beginSheetModal(for: window)
+        }
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(toggleSuggesting(_:)) {
+            menuItem.state = suggesting ? .on : .off
+        }
+        return true
+    }
+
     // MARK: - Undo/redo routed by focus
 
     @objc func ashokanUndo(_ sender: Any?) {
@@ -433,6 +511,18 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
             return v
         }
 
+        let flex = NSView()
+        flex.setContentHuggingPriority(.init(1), for: .horizontal)
+
+        let suggest = NSButton(title: "Suggest", target: self, action: #selector(toggleSuggesting(_:)))
+        suggest.setButtonType(.pushOnPushOff)
+        suggest.bezelStyle = .accessoryBarAction
+        suggest.controlSize = .small
+        suggest.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: "Suggest Edits")
+        suggest.imagePosition = .imageLeading
+        suggest.toolTip = "Suggest Edits — record changes as tracked insertions and deletions"
+        suggestButton = suggest
+
         let stack = NSStackView(views: [
             popup, spacer(6),
             fmtButton("bold", "Bold", #selector(fmtBold(_:))),
@@ -445,6 +535,8 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
             fmtButton("text.quote", "Blockquote", #selector(fmtBlockquote(_:))), spacer(6),
             fmtButton("photo", "Insert Image", #selector(insertImage(_:))),
             tablePopup,
+            flex,
+            suggest,
         ])
         stack.orientation = .horizontal
         stack.spacing = 8
@@ -455,6 +547,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate {
         bar.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
             stack.topAnchor.constraint(equalTo: bar.topAnchor),
             stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor),
             bar.heightAnchor.constraint(equalToConstant: 30),

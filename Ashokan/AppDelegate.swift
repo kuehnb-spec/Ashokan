@@ -148,6 +148,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         formatMenu.addItem(withTitle: "Add Link…", action: Selector(("fmtLink:")), keyEquivalent: "k")
         mainMenu.addItem(submenu: formatMenu, title: "Format")
 
+        // Review
+        let reviewMenu = NSMenu(title: "Review")
+        let suggest = reviewMenu.addItem(withTitle: "Suggest Edits",
+                                         action: Selector(("toggleSuggesting:")), keyEquivalent: "e")
+        suggest.keyEquivalentModifierMask = [.command, .shift]
+        reviewMenu.addItem(.separator())
+        let prevChange = reviewMenu.addItem(withTitle: "Previous Change",
+                                            action: Selector(("reviewPreviousChange:")), keyEquivalent: "[")
+        prevChange.keyEquivalentModifierMask = [.command, .option]
+        let nextChange = reviewMenu.addItem(withTitle: "Next Change",
+                                            action: Selector(("reviewNextChange:")), keyEquivalent: "]")
+        nextChange.keyEquivalentModifierMask = [.command, .option]
+        reviewMenu.addItem(withTitle: "Accept Change",
+                           action: Selector(("reviewAcceptChange:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Reject Change",
+                           action: Selector(("reviewRejectChange:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Accept All Changes",
+                           action: Selector(("reviewAcceptAll:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Reject All Changes",
+                           action: Selector(("reviewRejectAll:")), keyEquivalent: "")
+        reviewMenu.addItem(.separator())
+        let addComment = reviewMenu.addItem(withTitle: "Add Comment…",
+                                            action: Selector(("reviewAddComment:")), keyEquivalent: "m")
+        addComment.keyEquivalentModifierMask = [.command, .option]
+        reviewMenu.addItem(withTitle: "Show Comment",
+                           action: Selector(("reviewShowComment:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Remove Comment",
+                           action: Selector(("reviewRemoveComment:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Previous Comment",
+                           action: Selector(("reviewPreviousComment:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Next Comment",
+                           action: Selector(("reviewNextComment:")), keyEquivalent: "")
+        mainMenu.addItem(submenu: reviewMenu, title: "Review")
+
         // View
         let viewMenu = NSMenu(title: "View")
         viewMenu.addItem(withTitle: "Toggle Source", action: Selector(("toggleSourcePane:")), keyEquivalent: "/")

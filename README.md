@@ -63,6 +63,13 @@ swift scripts/roundtrip-test.swift   # headless fidelity checks on the real edit
 
 ## Features
 
+- **Review mode** — toggle *Suggest* and every edit becomes a tracked change:
+  standard `<ins>`/`<del>` markup with author and timestamp, so redlines render
+  in any browser with no Ashokan required. Comments are `<mark title="…">` —
+  hover to read them anywhere. Review menu: navigate changes (⌥⌘[ / ⌥⌘]),
+  accept/reject one or all, add (⌥⌘M), show, and remove comments. The status
+  bar counts pending suggestions and comments. Built for the agent workflow:
+  Claude Code or Codex proposes edits as `ins`/`del`, you adjudicate with clicks.
 - **Welcome launcher & workspace** — recent documents with live-rendered
   thumbnails, filename, and path; add your project folders to the workspace
   sidebar and browse every HTML/Markdown document in them.

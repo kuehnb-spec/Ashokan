@@ -17342,12 +17342,40 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     },
     strike: {
       attrs: { attrs: { default: {} } },
-      parseDOM: ["s", "strike", "del"].map((tag) => ({
+      parseDOM: ["s", "strike"].map((tag) => ({
         tag,
         getAttrs: (d2) => ({ attrs: bagFromDOM(d2) })
       })),
       toDOM(mark) {
         return ["s", bagToDOM(mark), 0];
+      }
+    },
+    // Tracked changes: standard HTML ins/del, so pending edits render
+    // (underline/strikethrough) in any browser, no Ashokan required.
+    ins: {
+      attrs: { attrs: { default: {} } },
+      inclusive: true,
+      parseDOM: [{ tag: "ins", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
+      toDOM(mark) {
+        return ["ins", bagToDOM(mark), 0];
+      }
+    },
+    del: {
+      attrs: { attrs: { default: {} } },
+      inclusive: false,
+      parseDOM: [{ tag: "del", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
+      toDOM(mark) {
+        return ["del", bagToDOM(mark), 0];
+      }
+    },
+    // Comments: <mark title="…"> so hovering shows the comment in any browser.
+    comment: {
+      attrs: { attrs: { default: {} } },
+      inclusive: false,
+      excludes: "",
+      parseDOM: [{ tag: "mark", getAttrs: (d2) => ({ attrs: bagFromDOM(d2) }) }],
+      toDOM(mark) {
+        return ["mark", bagToDOM(mark), 0];
       }
     },
     // Styled spans (very common in generated documents) keep their attributes.
@@ -17363,7 +17391,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     generic_inline: {
       attrs: { tag: { default: "span" }, attrs: { default: {} } },
       excludes: "",
-      parseDOM: ["sub", "sup", "small", "mark", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q"].map((tag) => ({
+      parseDOM: ["sub", "sup", "small", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q"].map((tag) => ({
         tag,
         getAttrs: (d2) => ({ tag, attrs: bagFromDOM(d2) })
       })),
@@ -17431,6 +17459,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     "s",
     "strike",
     "del",
+    "ins",
     "span",
     "sub",
     "sup",
@@ -17580,11 +17609,17 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     reader.onload = () => {
       const attrs = { src: reader.result };
       if (file.name && !file.name.startsWith("image.")) attrs.alt = file.name.replace(/\.[a-z]+$/i, "");
-      const node = schema.nodes.image.create({ attrs });
-      view2.dispatch(view2.state.tr.replaceSelectionWith(node).scrollIntoView());
+      view2.dispatch(imageInsertTr(view2.state, attrs).scrollIntoView());
     };
     reader.readAsDataURL(file);
     return true;
+  }
+  function imageInsertTr(state, attrs) {
+    const marks2 = suggesting ? [schema.marks.ins.create({ attrs: suggestionBag() })] : null;
+    const node = schema.nodes.image.create({ attrs }, null, marks2);
+    const tr = state.tr.replaceSelectionWith(node);
+    if (suggesting) tr.setMeta(SUGGEST_META, true);
+    return tr;
   }
   function buildInputRules() {
     return inputRules({
@@ -17610,7 +17645,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     emDelimiter: "*"
   });
   turndown.use(gfm);
-  turndown.keep(["figure", "figcaption", "details", "summary", "ins", "mark", "u", "sub", "sup", "kbd"]);
+  turndown.keep(["figure", "figcaption", "details", "summary", "ins", "del", "mark", "u", "sub", "sup", "kbd"]);
   function post(type, payload) {
     try {
       window.webkit.messageHandlers.ashokan.postMessage({ type, ...payload });
@@ -17625,9 +17660,147 @@ Please report this to https://github.com/markedjs/marked.`, e) {
   function notifyChange(state) {
     if (loading) return;
     const bodyHTML = serializeBodyHTML(state.doc);
-    const payload = { bodyHTML, words: wordCount(state.doc) };
+    const payload = {
+      bodyHTML,
+      words: wordCount(state.doc),
+      changes: collectChanges(state.doc).length,
+      comments: collectComments(state.doc).length
+    };
     if (isMarkdownDoc) payload.markdown = turndown.turndown(bodyHTML);
     post("docChanged", payload);
+  }
+  var suggesting = false;
+  var reviewAuthor = "";
+  function suggestionBag() {
+    const bag = { "data-ashokan-ts": (/* @__PURE__ */ new Date()).toISOString() };
+    if (reviewAuthor) bag["data-ashokan-author"] = reviewAuthor;
+    return bag;
+  }
+  var SUGGEST_META = "ashokan-suggestion";
+  function reviewPlugin() {
+    return new Plugin({
+      filterTransaction(tr) {
+        if (!suggesting || !tr.docChanged) return true;
+        if (tr.getMeta(SUGGEST_META) || tr.getMeta("history$")) return true;
+        return false;
+      }
+    });
+  }
+  function rangeEntirelyMarked(doc3, from2, to, markType) {
+    let all = true;
+    doc3.nodesBetween(from2, to, (node) => {
+      if (node.isInline && !markType.isInSet(node.marks)) all = false;
+    });
+    return all;
+  }
+  function suggestReplace(view2, from2, to, text) {
+    const { state } = view2;
+    const insType = schema.marks.ins;
+    const delType = schema.marks.del;
+    const tr = state.tr;
+    tr.setMeta(SUGGEST_META, true);
+    let insertAt = from2;
+    if (from2 !== to) {
+      if (rangeEntirelyMarked(state.doc, from2, to, insType)) {
+        tr.delete(from2, to);
+      } else {
+        tr.addMark(from2, to, delType.create({ attrs: suggestionBag() }));
+        insertAt = to;
+      }
+    }
+    if (text) {
+      tr.insertText(text, insertAt, insertAt);
+      tr.addMark(insertAt, insertAt + text.length, insType.create({ attrs: suggestionBag() }));
+      tr.setSelection(TextSelection.create(tr.doc, insertAt + text.length));
+    } else if (from2 !== to && insertAt === to) {
+      tr.setSelection(TextSelection.create(tr.doc, to));
+    }
+    view2.dispatch(tr.scrollIntoView());
+    return true;
+  }
+  function suggestDeleteKey(view2, forward) {
+    const { state } = view2;
+    const { from: from2, to, empty: empty2 } = state.selection;
+    if (!empty2) return suggestReplace(view2, from2, to, "");
+    const $pos = state.selection.$from;
+    const target = forward ? [from2, Math.min(from2 + 1, $pos.end())] : [Math.max(from2 - 1, $pos.start()), from2];
+    if (target[0] === target[1]) return true;
+    const insType = schema.marks.ins;
+    const delType = schema.marks.del;
+    const tr = state.tr;
+    tr.setMeta(SUGGEST_META, true);
+    if (rangeEntirelyMarked(state.doc, target[0], target[1], insType)) {
+      tr.delete(target[0], target[1]);
+    } else if (rangeEntirelyMarked(state.doc, target[0], target[1], delType)) {
+      tr.setSelection(TextSelection.create(tr.doc, forward ? target[1] : target[0]));
+    } else {
+      tr.addMark(target[0], target[1], delType.create({ attrs: suggestionBag() }));
+      tr.setSelection(TextSelection.create(tr.doc, forward ? target[1] : target[0]));
+    }
+    view2.dispatch(tr.scrollIntoView());
+    return true;
+  }
+  function collectChanges(doc3) {
+    const changes = [];
+    doc3.descendants((node, pos) => {
+      if (!node.isInline) return;
+      for (const markName of ["ins", "del"]) {
+        const mark = schema.marks[markName].isInSet(node.marks);
+        if (!mark) continue;
+        const last = changes[changes.length - 1];
+        if (last && last.type === markName && last.to === pos) {
+          last.to = pos + node.nodeSize;
+        } else {
+          changes.push({
+            from: pos,
+            to: pos + node.nodeSize,
+            type: markName,
+            author: (mark.attrs.attrs || {})["data-ashokan-author"] || ""
+          });
+        }
+      }
+    });
+    return changes;
+  }
+  function collectComments(doc3) {
+    const comments = [];
+    doc3.descendants((node, pos) => {
+      if (!node.isInline) return;
+      const mark = schema.marks.comment.isInSet(node.marks);
+      if (!mark) return;
+      const last = comments[comments.length - 1];
+      if (last && last.to === pos && last.text === ((mark.attrs.attrs || {}).title || "")) {
+        last.to = pos + node.nodeSize;
+      } else {
+        const bag = mark.attrs.attrs || {};
+        comments.push({
+          from: pos,
+          to: pos + node.nodeSize,
+          text: bag.title || "",
+          author: bag["data-ashokan-author"] || ""
+        });
+      }
+    });
+    return comments;
+  }
+  function changeAtOrAfter(items, pos, wrap2) {
+    if (!items.length) return null;
+    return items.find((c) => c.to > pos) || (wrap2 ? items[0] : null);
+  }
+  function selectRange(from2, to) {
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, from2, to)).scrollIntoView());
+    view.focus();
+  }
+  function resolveChange(change, accept) {
+    const tr = view.state.tr;
+    tr.setMeta(SUGGEST_META, true);
+    const keep = change.type === "ins" === accept;
+    if (keep) {
+      tr.removeMark(change.from, change.to, schema.marks[change.type]);
+    } else {
+      tr.delete(change.from, change.to);
+    }
+    view.dispatch(tr);
   }
   function editorKeymap() {
     return keymap({
@@ -17637,7 +17810,18 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       "Mod-e": toggleMark(schema.marks.code),
       "Mod-z": undo,
       "Shift-Mod-z": redo,
-      "Enter": splitListItem(schema.nodes.list_item),
+      // In suggesting mode structural splits pass through untracked (with the
+      // suggestion meta so the review filter allows them).
+      "Enter": (state, dispatch, viewArg) => {
+        const wrapped = dispatch && suggesting ? (tr) => dispatch(tr.setMeta(SUGGEST_META, true)) : dispatch;
+        return chainCommands(
+          splitListItem(schema.nodes.list_item),
+          newlineInCode,
+          createParagraphNear,
+          liftEmptyBlock,
+          splitBlock
+        )(state, wrapped, viewArg);
+      },
       "Mod-[": liftListItem(schema.nodes.list_item),
       "Mod-]": sinkListItem(schema.nodes.list_item),
       "Tab": goToNextCell(1),
@@ -17661,7 +17845,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         dropCursor(),
         gapCursor(),
         columnResizing(),
-        tableEditing()
+        tableEditing(),
+        reviewPlugin()
       ]
     });
   }
@@ -17683,6 +17868,23 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         container.innerHTML = html;
         preprocess(container);
         return container.innerHTML;
+      },
+      handleTextInput(view2, from2, to, text) {
+        if (!suggesting) return false;
+        return suggestReplace(view2, from2, to, text);
+      },
+      handleKeyDown(view2, event) {
+        if (!suggesting || event.metaKey || event.altKey || event.ctrlKey) return false;
+        if (event.key === "Backspace") return suggestDeleteKey(view2, false);
+        if (event.key === "Delete") return suggestDeleteKey(view2, true);
+        return false;
+      },
+      handlePaste(view2, event) {
+        if (!suggesting) return false;
+        const text = event.clipboardData?.getData("text/plain");
+        const { from: from2, to } = view2.state.selection;
+        if (text) suggestReplace(view2, from2, to, text);
+        return true;
       },
       handleDOMEvents: {
         paste(view2, event) {
@@ -17741,6 +17943,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     loadDocument(payload) {
       loading = true;
       try {
+        if (payload.author) reviewAuthor = payload.author;
         isMarkdownDoc = !!payload.isMarkdown;
         const bodyHTML = isMarkdownDoc ? g.parse(payload.markdown || "", { gfm: true }) : payload.bodyHTML || "";
         applyHeadHTML(payload.headHTML || "");
@@ -17750,7 +17953,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       } finally {
         loading = false;
       }
-      if (view) post("stats", { words: wordCount(view.state.doc) });
+      if (view) {
+        post("stats", {
+          words: wordCount(view.state.doc),
+          changes: collectChanges(view.state.doc).length,
+          comments: collectComments(view.state.doc).length
+        });
+      }
     },
     getBodyHTML() {
       return view ? serializeBodyHTML(view.state.doc) : "";
@@ -17811,7 +18020,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       const attrs = { src };
       if (alt) attrs.alt = alt;
       run2((state, dispatch) => {
-        dispatch(state.tr.replaceSelectionWith(schema.nodes.image.create({ attrs })).scrollIntoView());
+        dispatch(imageInsertTr(state, attrs).scrollIntoView());
         return true;
       });
     },
@@ -17870,6 +18079,106 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     },
     focus() {
       if (view) view.focus();
+    },
+    // --- Review mode ---
+    setSuggesting(on) {
+      suggesting = !!on;
+    },
+    isSuggesting() {
+      return suggesting;
+    },
+    setReviewAuthor(name) {
+      reviewAuthor = name || "";
+    },
+    nextChange() {
+      if (!view) return;
+      const change = changeAtOrAfter(collectChanges(view.state.doc), view.state.selection.to, true);
+      if (change) selectRange(change.from, change.to);
+    },
+    previousChange() {
+      if (!view) return;
+      const changes = collectChanges(view.state.doc);
+      if (!changes.length) return;
+      const before = changes.filter((c) => c.from < view.state.selection.from);
+      const change = before[before.length - 1] || changes[changes.length - 1];
+      selectRange(change.from, change.to);
+    },
+    acceptChange() {
+      this._resolveNearest(true);
+    },
+    rejectChange() {
+      this._resolveNearest(false);
+    },
+    _resolveNearest(accept) {
+      if (!view) return;
+      const changes = collectChanges(view.state.doc);
+      const pos = view.state.selection.from;
+      const change = changes.find((c) => c.from <= pos && pos <= c.to) || changeAtOrAfter(changes, pos, true);
+      if (change) resolveChange(change, accept);
+    },
+    acceptAllChanges() {
+      this._resolveAll(true);
+    },
+    rejectAllChanges() {
+      this._resolveAll(false);
+    },
+    _resolveAll(accept) {
+      if (!view) return;
+      const changes = collectChanges(view.state.doc);
+      if (!changes.length) return;
+      const tr = view.state.tr;
+      tr.setMeta(SUGGEST_META, true);
+      for (const change of changes.slice().reverse()) {
+        const keep = change.type === "ins" === accept;
+        if (keep) {
+          tr.removeMark(change.from, change.to, schema.marks[change.type]);
+        } else {
+          tr.delete(change.from, change.to);
+        }
+      }
+      view.dispatch(tr);
+    },
+    // --- Comments ---
+    addComment(text) {
+      if (!view || !text) return;
+      const { from: from2, to, empty: empty2 } = view.state.selection;
+      if (empty2) return;
+      const bag = { ...suggestionBag(), title: text };
+      const tr = view.state.tr;
+      tr.setMeta(SUGGEST_META, true);
+      tr.addMark(from2, to, schema.marks.comment.create({ attrs: bag }));
+      view.dispatch(tr);
+      view.focus();
+    },
+    // Returns {text, author} for the comment at the selection, else null.
+    commentAtSelection() {
+      if (!view) return null;
+      const pos = view.state.selection.from;
+      const comment = collectComments(view.state.doc).find((c) => c.from <= pos && pos <= c.to);
+      return comment ? { text: comment.text, author: comment.author } : null;
+    },
+    removeComment() {
+      if (!view) return;
+      const pos = view.state.selection.from;
+      const comment = collectComments(view.state.doc).find((c) => c.from <= pos && pos <= c.to);
+      if (!comment) return;
+      const tr = view.state.tr;
+      tr.setMeta(SUGGEST_META, true);
+      tr.removeMark(comment.from, comment.to, schema.marks.comment);
+      view.dispatch(tr);
+    },
+    nextComment() {
+      if (!view) return;
+      const comment = changeAtOrAfter(collectComments(view.state.doc), view.state.selection.to, true);
+      if (comment) selectRange(comment.from, comment.to);
+    },
+    previousComment() {
+      if (!view) return;
+      const comments = collectComments(view.state.doc);
+      if (!comments.length) return;
+      const before = comments.filter((c) => c.from < view.state.selection.from);
+      const comment = before[before.length - 1] || comments[comments.length - 1];
+      selectRange(comment.from, comment.to);
     }
   };
   document.addEventListener("DOMContentLoaded", () => {

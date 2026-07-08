@@ -21,6 +21,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     /// (bodyHTML, markdown-if-markdown-doc, wordCount)
     var onDocChanged: ((String, String?, Int) -> Void)?
     var onStats: ((Int) -> Void)?
+    /// (pending tracked changes, comments)
+    var onReviewCounts: ((Int, Int) -> Void)?
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -65,6 +67,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     }
 
     private func load(payload: [String: Any]) {
+        var payload = payload
+        payload["author"] = NSFullUserName()
         let work = { [weak self] in
             guard let self, let json = Self.jsonString(payload) else { return }
             self.webView.evaluateJavaScript("window.Ashokan.loadDocument(\(json));")
@@ -134,10 +138,12 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
             if let html = dict["bodyHTML"] as? String {
                 onDocChanged?(html, dict["markdown"] as? String, dict["words"] as? Int ?? 0)
             }
+            onReviewCounts?(dict["changes"] as? Int ?? 0, dict["comments"] as? Int ?? 0)
         case "stats":
             if let words = dict["words"] as? Int {
                 onStats?(words)
             }
+            onReviewCounts?(dict["changes"] as? Int ?? 0, dict["comments"] as? Int ?? 0)
         default:
             break
         }

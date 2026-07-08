@@ -9,12 +9,13 @@
 //    and returns body HTML.
 
 import { Schema, DOMParser as PMDOMParser, DOMSerializer } from "prosemirror-model"
-import { EditorState, TextSelection } from "prosemirror-state"
+import { EditorState, TextSelection, Plugin } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
 import { history, undo, redo } from "prosemirror-history"
 import { keymap } from "prosemirror-keymap"
 import {
   baseKeymap, toggleMark, setBlockType, wrapIn, lift, chainCommands, exitCode,
+  newlineInCode, createParagraphNear, liftEmptyBlock, splitBlock,
 } from "prosemirror-commands"
 import { wrapInList, splitListItem, liftListItem, sinkListItem } from "prosemirror-schema-list"
 import { inputRules, wrappingInputRule, textblockTypeInputRule } from "prosemirror-inputrules"
@@ -255,10 +256,35 @@ const marks = {
 
   strike: {
     attrs: { attrs: { default: {} } },
-    parseDOM: ["s", "strike", "del"].map(tag => ({
+    parseDOM: ["s", "strike"].map(tag => ({
       tag, getAttrs: d => ({ attrs: bagFromDOM(d) }),
     })),
     toDOM(mark) { return ["s", bagToDOM(mark), 0] },
+  },
+
+  // Tracked changes: standard HTML ins/del, so pending edits render
+  // (underline/strikethrough) in any browser, no Ashokan required.
+  ins: {
+    attrs: { attrs: { default: {} } },
+    inclusive: true,
+    parseDOM: [{ tag: "ins", getAttrs: d => ({ attrs: bagFromDOM(d) }) }],
+    toDOM(mark) { return ["ins", bagToDOM(mark), 0] },
+  },
+
+  del: {
+    attrs: { attrs: { default: {} } },
+    inclusive: false,
+    parseDOM: [{ tag: "del", getAttrs: d => ({ attrs: bagFromDOM(d) }) }],
+    toDOM(mark) { return ["del", bagToDOM(mark), 0] },
+  },
+
+  // Comments: <mark title="…"> so hovering shows the comment in any browser.
+  comment: {
+    attrs: { attrs: { default: {} } },
+    inclusive: false,
+    excludes: "",
+    parseDOM: [{ tag: "mark", getAttrs: d => ({ attrs: bagFromDOM(d) }) }],
+    toDOM(mark) { return ["mark", bagToDOM(mark), 0] },
   },
 
   // Styled spans (very common in generated documents) keep their attributes.
@@ -273,7 +299,7 @@ const marks = {
   generic_inline: {
     attrs: { tag: { default: "span" }, attrs: { default: {} } },
     excludes: "",
-    parseDOM: ["sub", "sup", "small", "mark", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q"].map(tag => ({
+    parseDOM: ["sub", "sup", "small", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q"].map(tag => ({
       tag, getAttrs: d => ({ tag, attrs: bagFromDOM(d) }),
     })),
     toDOM(mark) { return [mark.attrs.tag, bagToDOM(mark), 0] },
@@ -313,7 +339,7 @@ const KNOWN_TAGS = new Set([
   "p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "code",
   "ol", "ul", "li", "hr", "img", "br", "figcaption",
   "table", "thead", "tbody", "tfoot", "tr", "th", "td",
-  "a", "strong", "b", "em", "i", "u", "s", "strike", "del", "span",
+  "a", "strong", "b", "em", "i", "u", "s", "strike", "del", "ins", "span",
   "sub", "sup", "small", "mark", "kbd", "abbr", "cite", "dfn", "var", "samp", "time", "q",
   ...CONTAINER_TAGS,
 ])
@@ -467,11 +493,21 @@ function insertImageFile(file, view) {
   reader.onload = () => {
     const attrs = { src: reader.result }
     if (file.name && !file.name.startsWith("image.")) attrs.alt = file.name.replace(/\.[a-z]+$/i, "")
-    const node = schema.nodes.image.create({ attrs })
-    view.dispatch(view.state.tr.replaceSelectionWith(node).scrollIntoView())
+    view.dispatch(imageInsertTr(view.state, attrs).scrollIntoView())
   }
   reader.readAsDataURL(file)
   return true
+}
+
+// In suggesting mode the image arrives as a tracked insertion.
+function imageInsertTr(state, attrs) {
+  const marks = suggesting
+    ? [schema.marks.ins.create({ attrs: suggestionBag() })]
+    : null
+  const node = schema.nodes.image.create({ attrs }, null, marks)
+  const tr = state.tr.replaceSelectionWith(node)
+  if (suggesting) tr.setMeta(SUGGEST_META, true)
+  return tr
 }
 
 // ---------------------------------------------------------------------------
@@ -506,7 +542,7 @@ const turndown = new TurndownService({
 })
 turndown.use(gfm)
 // Keep constructs Markdown can't express as inline HTML (valid in Markdown).
-turndown.keep(["figure", "figcaption", "details", "summary", "ins", "mark", "u", "sub", "sup", "kbd"])
+turndown.keep(["figure", "figcaption", "details", "summary", "ins", "del", "mark", "u", "sub", "sup", "kbd"])
 
 function post(type, payload) {
   try {
@@ -523,9 +559,177 @@ function wordCount(doc) {
 function notifyChange(state) {
   if (loading) return
   const bodyHTML = serializeBodyHTML(state.doc)
-  const payload = { bodyHTML, words: wordCount(state.doc) }
+  const payload = {
+    bodyHTML,
+    words: wordCount(state.doc),
+    changes: collectChanges(state.doc).length,
+    comments: collectComments(state.doc).length,
+  }
   if (isMarkdownDoc) payload.markdown = turndown.turndown(bodyHTML)
   post("docChanged", payload)
+}
+
+// ---------------------------------------------------------------------------
+// Review mode: tracked changes and comments.
+//
+// Suggesting mode intercepts typing, deletion, and pasting, and records them
+// as standard <ins>/<del> markup instead of applying them. Anything it can't
+// represent as a suggestion is blocked while suggesting (a strict guarantee:
+// no edit sneaks through untracked). Structural Enter is allowed untracked.
+// ---------------------------------------------------------------------------
+
+let suggesting = false
+let reviewAuthor = ""
+
+function suggestionBag() {
+  const bag = { "data-ashokan-ts": new Date().toISOString() }
+  if (reviewAuthor) bag["data-ashokan-author"] = reviewAuthor
+  return bag
+}
+
+const SUGGEST_META = "ashokan-suggestion"
+
+function reviewPlugin() {
+  return new Plugin({
+    filterTransaction(tr) {
+      if (!suggesting || !tr.docChanged) return true
+      if (tr.getMeta(SUGGEST_META) || tr.getMeta("history$")) return true
+      return false
+    },
+  })
+}
+
+/// True when every inline leaf in [from, to] carries the given mark.
+function rangeEntirelyMarked(doc, from, to, markType) {
+  let all = true
+  doc.nodesBetween(from, to, node => {
+    if (node.isInline && !markType.isInSet(node.marks)) all = false
+  })
+  return all
+}
+
+function suggestReplace(view, from, to, text) {
+  const { state } = view
+  const insType = schema.marks.ins
+  const delType = schema.marks.del
+  const tr = state.tr
+  tr.setMeta(SUGGEST_META, true)
+
+  let insertAt = from
+  if (from !== to) {
+    if (rangeEntirelyMarked(state.doc, from, to, insType)) {
+      // Deleting one's own pending insertion really deletes it.
+      tr.delete(from, to)
+    } else {
+      tr.addMark(from, to, delType.create({ attrs: suggestionBag() }))
+      insertAt = to
+    }
+  }
+  if (text) {
+    tr.insertText(text, insertAt, insertAt)
+    tr.addMark(insertAt, insertAt + text.length, insType.create({ attrs: suggestionBag() }))
+    tr.setSelection(TextSelection.create(tr.doc, insertAt + text.length))
+  } else if (from !== to && insertAt === to) {
+    tr.setSelection(TextSelection.create(tr.doc, to))
+  }
+  view.dispatch(tr.scrollIntoView())
+  return true
+}
+
+function suggestDeleteKey(view, forward) {
+  const { state } = view
+  const { from, to, empty } = state.selection
+  if (!empty) return suggestReplace(view, from, to, "")
+  const $pos = state.selection.$from
+  const target = forward
+    ? [from, Math.min(from + 1, $pos.end())]
+    : [Math.max(from - 1, $pos.start()), from]
+  if (target[0] === target[1]) return true // block-boundary joins stay untracked; swallow
+  const insType = schema.marks.ins
+  const delType = schema.marks.del
+  const tr = state.tr
+  tr.setMeta(SUGGEST_META, true)
+  if (rangeEntirelyMarked(state.doc, target[0], target[1], insType)) {
+    tr.delete(target[0], target[1])
+  } else if (rangeEntirelyMarked(state.doc, target[0], target[1], delType)) {
+    // Already marked deleted: just step over it.
+    tr.setSelection(TextSelection.create(tr.doc, forward ? target[1] : target[0]))
+  } else {
+    tr.addMark(target[0], target[1], delType.create({ attrs: suggestionBag() }))
+    tr.setSelection(TextSelection.create(tr.doc, forward ? target[1] : target[0]))
+  }
+  view.dispatch(tr.scrollIntoView())
+  return true
+}
+
+/// Contiguous ins/del runs, in document order.
+function collectChanges(doc) {
+  const changes = []
+  doc.descendants((node, pos) => {
+    if (!node.isInline) return
+    for (const markName of ["ins", "del"]) {
+      const mark = schema.marks[markName].isInSet(node.marks)
+      if (!mark) continue
+      const last = changes[changes.length - 1]
+      if (last && last.type === markName && last.to === pos) {
+        last.to = pos + node.nodeSize
+      } else {
+        changes.push({
+          from: pos,
+          to: pos + node.nodeSize,
+          type: markName,
+          author: (mark.attrs.attrs || {})["data-ashokan-author"] || "",
+        })
+      }
+    }
+  })
+  return changes
+}
+
+function collectComments(doc) {
+  const comments = []
+  doc.descendants((node, pos) => {
+    if (!node.isInline) return
+    const mark = schema.marks.comment.isInSet(node.marks)
+    if (!mark) return
+    const last = comments[comments.length - 1]
+    if (last && last.to === pos && last.text === ((mark.attrs.attrs || {}).title || "")) {
+      last.to = pos + node.nodeSize
+    } else {
+      const bag = mark.attrs.attrs || {}
+      comments.push({
+        from: pos,
+        to: pos + node.nodeSize,
+        text: bag.title || "",
+        author: bag["data-ashokan-author"] || "",
+      })
+    }
+  })
+  return comments
+}
+
+function changeAtOrAfter(items, pos, wrap) {
+  if (!items.length) return null
+  return items.find(c => c.to > pos) || (wrap ? items[0] : null)
+}
+
+function selectRange(from, to) {
+  view.dispatch(view.state.tr
+    .setSelection(TextSelection.create(view.state.doc, from, to))
+    .scrollIntoView())
+  view.focus()
+}
+
+function resolveChange(change, accept) {
+  const tr = view.state.tr
+  tr.setMeta(SUGGEST_META, true)
+  const keep = (change.type === "ins") === accept
+  if (keep) {
+    tr.removeMark(change.from, change.to, schema.marks[change.type])
+  } else {
+    tr.delete(change.from, change.to)
+  }
+  view.dispatch(tr)
 }
 
 function editorKeymap() {
@@ -536,7 +740,17 @@ function editorKeymap() {
     "Mod-e": toggleMark(schema.marks.code),
     "Mod-z": undo,
     "Shift-Mod-z": redo,
-    "Enter": splitListItem(schema.nodes.list_item),
+    // In suggesting mode structural splits pass through untracked (with the
+    // suggestion meta so the review filter allows them).
+    "Enter": (state, dispatch, viewArg) => {
+      const wrapped = dispatch && suggesting
+        ? (tr => dispatch(tr.setMeta(SUGGEST_META, true)))
+        : dispatch
+      return chainCommands(
+        splitListItem(schema.nodes.list_item),
+        newlineInCode, createParagraphNear, liftEmptyBlock, splitBlock
+      )(state, wrapped, viewArg)
+    },
     "Mod-[": liftListItem(schema.nodes.list_item),
     "Mod-]": sinkListItem(schema.nodes.list_item),
     "Tab": goToNextCell(1),
@@ -562,6 +776,7 @@ function createState(doc) {
       gapCursor(),
       columnResizing(),
       tableEditing(),
+      reviewPlugin(),
     ],
   })
 }
@@ -581,6 +796,23 @@ function mount(doc) {
       container.innerHTML = html
       preprocess(container)
       return container.innerHTML
+    },
+    handleTextInput(view, from, to, text) {
+      if (!suggesting) return false
+      return suggestReplace(view, from, to, text)
+    },
+    handleKeyDown(view, event) {
+      if (!suggesting || event.metaKey || event.altKey || event.ctrlKey) return false
+      if (event.key === "Backspace") return suggestDeleteKey(view, false)
+      if (event.key === "Delete") return suggestDeleteKey(view, true)
+      return false
+    },
+    handlePaste(view, event) {
+      if (!suggesting) return false
+      const text = event.clipboardData?.getData("text/plain")
+      const { from, to } = view.state.selection
+      if (text) suggestReplace(view, from, to, text)
+      return true // rich paste can't be tracked; plain text was
     },
     handleDOMEvents: {
       paste(view, event) {
@@ -644,6 +876,7 @@ window.Ashokan = {
   loadDocument(payload) {
     loading = true
     try {
+      if (payload.author) reviewAuthor = payload.author
       isMarkdownDoc = !!payload.isMarkdown
       const bodyHTML = isMarkdownDoc
         ? marked.parse(payload.markdown || "", { gfm: true })
@@ -655,7 +888,13 @@ window.Ashokan = {
     } finally {
       loading = false
     }
-    if (view) post("stats", { words: wordCount(view.state.doc) })
+    if (view) {
+      post("stats", {
+        words: wordCount(view.state.doc),
+        changes: collectChanges(view.state.doc).length,
+        comments: collectComments(view.state.doc).length,
+      })
+    }
   },
 
   getBodyHTML() {
@@ -695,7 +934,7 @@ window.Ashokan = {
     const attrs = { src }
     if (alt) attrs.alt = alt
     run((state, dispatch) => {
-      dispatch(state.tr.replaceSelectionWith(schema.nodes.image.create({ attrs })).scrollIntoView())
+      dispatch(imageInsertTr(state, attrs).scrollIntoView())
       return true
     })
   },
@@ -750,6 +989,109 @@ window.Ashokan = {
   redo() { run(redo) },
 
   focus() { if (view) view.focus() },
+
+  // --- Review mode ---
+
+  setSuggesting(on) { suggesting = !!on },
+  isSuggesting() { return suggesting },
+  setReviewAuthor(name) { reviewAuthor = name || "" },
+
+  nextChange() {
+    if (!view) return
+    const change = changeAtOrAfter(collectChanges(view.state.doc), view.state.selection.to, true)
+    if (change) selectRange(change.from, change.to)
+  },
+
+  previousChange() {
+    if (!view) return
+    const changes = collectChanges(view.state.doc)
+    if (!changes.length) return
+    const before = changes.filter(c => c.from < view.state.selection.from)
+    const change = before[before.length - 1] || changes[changes.length - 1]
+    selectRange(change.from, change.to)
+  },
+
+  acceptChange() { this._resolveNearest(true) },
+  rejectChange() { this._resolveNearest(false) },
+
+  _resolveNearest(accept) {
+    if (!view) return
+    const changes = collectChanges(view.state.doc)
+    const pos = view.state.selection.from
+    const change = changes.find(c => c.from <= pos && pos <= c.to)
+      || changeAtOrAfter(changes, pos, true)
+    if (change) resolveChange(change, accept)
+  },
+
+  acceptAllChanges() { this._resolveAll(true) },
+  rejectAllChanges() { this._resolveAll(false) },
+
+  _resolveAll(accept) {
+    if (!view) return
+    const changes = collectChanges(view.state.doc)
+    if (!changes.length) return
+    const tr = view.state.tr
+    tr.setMeta(SUGGEST_META, true)
+    for (const change of changes.slice().reverse()) {
+      const keep = (change.type === "ins") === accept
+      if (keep) {
+        tr.removeMark(change.from, change.to, schema.marks[change.type])
+      } else {
+        tr.delete(change.from, change.to)
+      }
+    }
+    view.dispatch(tr)
+  },
+
+  // --- Comments ---
+
+  addComment(text) {
+    if (!view || !text) return
+    const { from, to, empty } = view.state.selection
+    if (empty) return
+    const bag = { ...suggestionBag(), title: text }
+    const tr = view.state.tr
+    tr.setMeta(SUGGEST_META, true)
+    tr.addMark(from, to, schema.marks.comment.create({ attrs: bag }))
+    view.dispatch(tr)
+    view.focus()
+  },
+
+  // Returns {text, author} for the comment at the selection, else null.
+  commentAtSelection() {
+    if (!view) return null
+    const pos = view.state.selection.from
+    const comment = collectComments(view.state.doc)
+      .find(c => c.from <= pos && pos <= c.to)
+    return comment ? { text: comment.text, author: comment.author } : null
+  },
+
+  removeComment() {
+    if (!view) return
+    const pos = view.state.selection.from
+    const comment = collectComments(view.state.doc)
+      .find(c => c.from <= pos && pos <= c.to)
+    if (!comment) return
+    const tr = view.state.tr
+    tr.setMeta(SUGGEST_META, true)
+    tr.removeMark(comment.from, comment.to, schema.marks.comment)
+    view.dispatch(tr)
+  },
+
+  nextComment() {
+    if (!view) return
+    const comment = changeAtOrAfter(collectComments(view.state.doc), view.state.selection.to, true)
+    if (comment) selectRange(comment.from, comment.to)
+  },
+
+  previousComment() {
+    if (!view) return
+    const comments = collectComments(view.state.doc)
+    if (!comments.length) return
+    const before = comments.filter(c => c.from < view.state.selection.from)
+    const comment = before[before.length - 1] || comments[comments.length - 1]
+    selectRange(comment.from, comment.to)
+  },
 }
 
 document.addEventListener("DOMContentLoaded", () => {

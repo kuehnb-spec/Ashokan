@@ -29,12 +29,13 @@
   "updated": "2026-07-07",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
-  "summary": "v0.3 after Brant's first hands-on feedback (he's loving it): thin status bar (path · format · size · saved time · live word count), two-tier chrome (file commands in the toolbar, formatting in a slim bar below, native window tabs, View zoom), workspace folders in the Welcome sidebar (add folders, browse their HTML/MD files as thumbnail cards), and full Markdown support (open/edit WYSIWYG/save as Markdown via marked+turndown; source pane shows Markdown; correct UTI net.daringfireball.markdown). Fidelity test now 21/21 including Markdown round-trip. Icon brief with 5 concepts + ChatGPT prompts in docs/icon-brief.md.",
+  "summary": "v0.4: REVIEW MODE shipped — the crown-jewel feature. Suggest toggle (format bar + ⇧⌘E) records edits as standard ins/del markup with author/timestamp (renders as redlines in any browser); comments as mark+title (hover to read anywhere); Review menu with next/prev change (⌥⌘[/]), accept/reject one or all, add/show/remove comments; status bar counts pending suggestions/comments; strict guarantee via transaction filter that no edit sneaks through untracked while suggesting. Fidelity harness 25/25 across HTML, Markdown, and review phases. samples/review-demo.html shows the agent-collab story. Known v1 limits: formatting/structural changes not tracked (blocked or untracked-Enter), rich paste in suggesting becomes plain text.",
   "next": [
-    { "text": "Brant: generate icon images from docs/icon-brief.md prompts, hand Claude the 1024px PNG to wire in.", "priority": "high" },
-    { "text": "Review mode: Suggesting-mode ProseMirror plugin writing standard ins/del markup, comments as mark+title+JSON island, Review toolbar with accept/reject.", "priority": "high" },
-    { "text": "Ship prep: Developer ID signing + notarization, Release build, public repo (see icon-brief.md checklist).", "priority": "med" },
-    { "text": "Preserve colgroup and table caption; find & replace; source syntax highlighting; PDF page numbers; QuickLook extension.", "priority": "med" }
+    { "text": "Brant: try review-demo.html — toggle Suggest, type, accept/reject via Review menu. Icons still pending (docs/icon-brief.md).", "priority": "high" },
+    { "text": "Skins: view-level CSS themes (a skin = a CSS file), customize panel, 'bake skin into document' command. Design agreed in chat July 7.", "priority": "med" },
+    { "text": "Plugins: build the Ollama/local-LLM integration natively first (suggestions arrive as tracked changes), extract the plugin protocol from it after. Claude Code CLI integration second.", "priority": "med" },
+    { "text": "Review v2: comment sidebar + threads, tracked formatting changes, per-author colors.", "priority": "med" },
+    { "text": "Ship prep: Developer ID signing + notarization, Release build, public repo.", "priority": "med" }
   ],
   "open_questions": [
     "Distribution: direct download with Developer ID signing, or personal use only for now?",

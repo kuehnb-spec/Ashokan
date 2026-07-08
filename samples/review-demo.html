@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review Demo — Suggested Edits</title>
+<style>
+  body { font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         color: #1c1e21; max-width: 46em; margin: 0 auto; padding: 48px 56px 120px; }
+  h1 { font-size: 1.9em; letter-spacing: -0.02em; border-bottom: 2px solid #7c3aed; padding-bottom: 0.3em; }
+  h2 { font-size: 1.35em; margin-top: 1.6em; color: #7c3aed; }
+  .meta { color: #667085; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<h1>Memo with Suggested Edits</h1>
+<p class="meta">This document arrived with tracked changes — as if Claude Code reviewed a draft and proposed edits. Use the Review menu (or ⌥⌘] to jump between changes) to accept or reject each one. Hover the yellow highlight to read the comment.</p>
+
+<h2>Draft paragraph</h2>
+<p>The project timeline is <del data-ashokan-author="Claude Code">very aggressive</del><ins data-ashokan-author="Claude Code">ambitious but achievable</ins>, and the team <del data-ashokan-author="Claude Code">should probably</del><ins data-ashokan-author="Claude Code">will</ins> deliver the first milestone by March.</p>
+
+<p>Budget approval is <mark title="Is this still true after Friday's meeting? — Claude Code" data-ashokan-author="Claude Code">expected within two weeks</mark>, at which point procurement can begin.</p>
+
+<h2>What to try</h2>
+<p>Flip to Source (⌘/) — the suggestions are just standard HTML <ins data-ashokan-author="Claude Code">ins and del elements</ins> that render in any browser. Toggle <strong>Suggest</strong> in the format bar and type anywhere: your own edits become tracked changes too.</p>
+</body>
+</html>

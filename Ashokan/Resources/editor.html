@@ -44,6 +44,25 @@
   .ashokan-raw--inline { display: inline; }
   .ashokan-raw:hover { box-shadow: 0 0 0 1px rgba(110, 168, 254, 0.55); cursor: default; }
 
+  /* Review mode: tracked changes and comments. Plain browsers already render
+     ins/del/mark sensibly; these refine the look inside Ashokan. */
+  .ProseMirror ins {
+    background: rgba(46, 160, 67, 0.13);
+    text-decoration: underline;
+    text-decoration-color: #2ea043;
+    text-decoration-thickness: 1.5px;
+  }
+  .ProseMirror del {
+    background: rgba(248, 81, 73, 0.09);
+    text-decoration: line-through;
+    text-decoration-color: #f85149;
+  }
+  .ProseMirror mark[title] {
+    background: rgba(255, 214, 10, 0.35);
+    border-bottom: 1.5px dotted #b08800;
+    cursor: help;
+  }
+
   /* Images: selectable with a corner resize handle. */
   .ashokan-image { position: relative; display: inline-block; max-width: 100%; }
   .ashokan-image img { max-width: 100%; }

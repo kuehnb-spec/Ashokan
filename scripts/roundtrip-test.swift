@@ -113,6 +113,57 @@ final class Harness: NSObject, WKScriptMessageHandler {
                 if !ok { failures += 1 }
             }
             if failures > 0 { print("round-tripped markdown:\n\(md)") }
+            self.runReviewPhase(previousFailures: failures)
+        }
+    }
+
+    func runReviewPhase(previousFailures: Int) {
+        let reviewBody = #"<p>Keep <del data-ashokan-author="Agent">old</del><ins data-ashokan-author="Agent">new</ins> text with <mark title="check this" data-ashokan-author="Brant">a note</mark>.</p>"#
+        let payload = try! JSONSerialization.data(
+            withJSONObject: ["bodyHTML": reviewBody, "headHTML": "", "bodyAttrs": [:], "hasOwnStyles": true]
+        )
+        let json = String(data: payload, encoding: .utf8)!
+        let script = """
+        (() => {
+          const out = {}
+          window.Ashokan.loadDocument(\(json))
+          out.roundtrip = window.Ashokan.getBodyHTML()
+          window.Ashokan.acceptAllChanges()
+          out.accepted = window.Ashokan.getBodyHTML()
+          window.Ashokan.loadDocument(\(json))
+          window.Ashokan.rejectAllChanges()
+          out.rejected = window.Ashokan.getBodyHTML()
+          return JSON.stringify(out)
+        })()
+        """
+        webView.evaluateJavaScript(script) { result, error in
+            if let error { fail("review evaluate error: \(error)") }
+            guard let raw = result as? String,
+                  let data = raw.data(using: .utf8),
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
+                  let roundtrip = dict["roundtrip"], let accepted = dict["accepted"], let rejected = dict["rejected"]
+            else { fail("no review output"); return }
+
+            var failures = previousFailures
+            let checks: [(String, Bool)] = [
+                ("ins/del/comment markup round-trips with authors",
+                 roundtrip.contains("<del data-ashokan-author=\"Agent\">old</del>")
+                 && roundtrip.contains("<ins data-ashokan-author=\"Agent\">new</ins>")
+                 && roundtrip.contains("title=\"check this\"")),
+                ("accept all: deletion removed, insertion kept unwrapped",
+                 accepted.contains("Keep new text") && !accepted.contains("<ins") && !accepted.contains("old")),
+                ("accept all: comment untouched", accepted.contains("<mark")),
+                ("reject all: insertion removed, deletion restored unwrapped",
+                 rejected.contains("Keep old text") && !rejected.contains("<del") && !rejected.contains("new")),
+            ]
+            print("--- review phase ---")
+            for (name, ok) in checks {
+                print("\(ok ? "PASS" : "FAIL")  \(name)")
+                if !ok { failures += 1 }
+            }
+            if failures > previousFailures {
+                print("roundtrip: \(roundtrip)\naccepted: \(accepted)\nrejected: \(rejected)")
+            }
             exit(failures == 0 ? 0 : 1)
         }
     }

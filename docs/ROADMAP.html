@@ -27,7 +27,7 @@
 <p><strong>Guiding principle for every feature:</strong> the document must remain a plain, self-contained HTML file that renders correctly in any browser, with or without Ashokan. No sidecar files, no proprietary blobs, no lock-in — ever.</p>
 </div>
 
-<h2>1. Review mode — tracked changes &amp; comments</h2>
+<h2>1. Review mode — tracked changes &amp; comments <small>✅ shipped July 7 (sidebar &amp; threads later)</small></h2>
 <p>The crown jewel, and the feature no other editor can offer in an open format. The trick: <strong>HTML already has semantic elements for tracked changes.</strong> <code>&lt;ins&gt;</code> and <code>&lt;del&gt;</code> are standard HTML — every browser renders insertions underlined and deletions struck through. So a document with pending edits is still just an HTML file, reviewable in Chrome by someone who has never heard of Ashokan.</p>
 <ul>
 <li><strong>Suggesting mode:</strong> a ProseMirror plugin intercepts every edit and rewrites it as <code>&lt;ins data-author data-ts&gt;</code> / <code>&lt;del&gt;</code> markup instead of applying it directly.</li>
