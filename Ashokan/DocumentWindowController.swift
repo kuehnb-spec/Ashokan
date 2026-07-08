@@ -14,6 +14,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     private var pendingComments = 0
     private var suggesting = false
     private var suggestButton: NSButton!
+    private var reviewAccessory: NSTitlebarAccessoryViewController!
 
     private var doc: Document { document as! Document }
 
@@ -82,6 +83,12 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         formatAccessory.view = buildFormatBar()
         window.addTitlebarAccessoryViewController(formatAccessory)
 
+        reviewAccessory = NSTitlebarAccessoryViewController()
+        reviewAccessory.layoutAttribute = .bottom
+        reviewAccessory.view = buildReviewBar()
+        reviewAccessory.isHidden = true
+        window.addTitlebarAccessoryViewController(reviewAccessory)
+
         wireUp()
     }
 
@@ -115,6 +122,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             self?.pendingChanges = changes
             self?.pendingComments = comments
             self?.updateStatusBar()
+            self?.updateReviewBarVisibility()
         }
         editorVC.onStats = { [weak self] words in
             self?.lastWordCount = words
@@ -391,6 +399,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         suggesting.toggle()
         suggestButton?.state = suggesting ? .on : .off
         editorVC.call("setSuggesting", argument: suggesting)
+        updateReviewBarVisibility()
         editorVC.focusEditor()
     }
 
@@ -554,6 +563,81 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             popup.widthAnchor.constraint(equalToConstant: 110),
         ])
         return bar
+    }
+
+    // MARK: - Review bar (appears while suggesting or when the document
+    // carries pending changes/comments)
+
+    private func buildReviewBar() -> NSView {
+        func iconButton(_ symbol: String, _ tooltip: String, _ action: Selector) -> NSButton {
+            let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)!,
+                                  target: self, action: action)
+            button.isBordered = false
+            button.bezelStyle = .regularSquare
+            button.toolTip = tooltip
+            return button
+        }
+        func textButton(_ title: String, _ action: Selector) -> NSButton {
+            let button = NSButton(title: title, target: self, action: action)
+            button.bezelStyle = .accessoryBarAction
+            button.controlSize = .small
+            return button
+        }
+        func caption(_ text: String) -> NSTextField {
+            let label = NSTextField(labelWithString: text)
+            label.font = .systemFont(ofSize: 11, weight: .semibold)
+            label.textColor = .secondaryLabelColor
+            return label
+        }
+        func divider() -> NSBox {
+            let box = NSBox()
+            box.boxType = .separator
+            box.heightAnchor.constraint(equalToConstant: 16).isActive = true
+            return box
+        }
+
+        let flex = NSView()
+        flex.setContentHuggingPriority(.init(1), for: .horizontal)
+
+        let stack = NSStackView(views: [
+            caption("Changes"),
+            iconButton("chevron.left", "Previous Change (⌥⌘[)", #selector(reviewPreviousChange(_:))),
+            iconButton("chevron.right", "Next Change (⌥⌘])", #selector(reviewNextChange(_:))),
+            iconButton("checkmark", "Accept Change", #selector(reviewAcceptChange(_:))),
+            iconButton("xmark", "Reject Change", #selector(reviewRejectChange(_:))),
+            textButton("Accept All", #selector(reviewAcceptAll(_:))),
+            textButton("Reject All", #selector(reviewRejectAll(_:))),
+            divider(),
+            caption("Comments"),
+            iconButton("chevron.left", "Previous Comment", #selector(reviewPreviousComment(_:))),
+            iconButton("chevron.right", "Next Comment", #selector(reviewNextComment(_:))),
+            textButton("Add…", #selector(reviewAddComment(_:))),
+            textButton("Show", #selector(reviewShowComment(_:))),
+            textButton("Remove", #selector(reviewRemoveComment(_:))),
+            flex,
+        ])
+        stack.orientation = .horizontal
+        stack.spacing = 8
+        stack.edgeInsets = NSEdgeInsets(top: 2, left: 12, bottom: 4, right: 12)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let bar = NSView()
+        bar.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: bar.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor),
+            bar.heightAnchor.constraint(equalToConstant: 28),
+        ])
+        return bar
+    }
+
+    private func updateReviewBarVisibility() {
+        let shouldShow = suggesting || pendingChanges > 0 || pendingComments > 0
+        if reviewAccessory.isHidden == shouldShow {
+            reviewAccessory.isHidden = !shouldShow
+        }
     }
 
     // MARK: - Zoom

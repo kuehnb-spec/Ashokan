@@ -29,6 +29,7 @@ targets:
         LSApplicationCategoryType: public.app-category.productivity
         LSMinimumSystemVersion: "14.0"
         NSHumanReadableCopyright: "© 2026 Brant Kuehn · MIT License"
+        CFBundleIconFile: AppIcon
         NSPrincipalClass: NSApplication
         CFBundleDocumentTypes:
           - CFBundleTypeName: HTML Document
