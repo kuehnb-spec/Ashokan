@@ -18,7 +18,11 @@ elif [ ! -f Ashokan/Resources/editor.js ]; then
 fi
 
 xcodegen
+# Version from the VERSION file; build number from the git commit count.
+MARKETING_VERSION="$(cat VERSION 2>/dev/null || echo 0.0.0)"
+BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 xcodebuild -project Ashokan.xcodeproj -scheme Ashokan -configuration Debug \
+  MARKETING_VERSION="$MARKETING_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
   -derivedDataPath build build | tail -3
 
 # Install where Spotlight, Finder, and the Dock can see it.

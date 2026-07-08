@@ -24,8 +24,8 @@ targets:
       properties:
         CFBundleName: Ashokan
         CFBundleDisplayName: Ashokan
-        CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSApplicationCategoryType: public.app-category.productivity
         LSMinimumSystemVersion: "14.0"
         NSHumanReadableCopyright: "© 2026 Brant Kuehn · MIT License"
