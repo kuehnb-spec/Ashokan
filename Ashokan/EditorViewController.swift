@@ -1,4 +1,5 @@
 import Cocoa
+import PDFKit
 import WebKit
 
 /// Breaks the WKUserContentController → handler retain cycle so closed
@@ -29,6 +30,10 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     var onEditCommentRequested: (() -> Void)?
     /// Cursor moved into a block: "h1"…"h6", "code", or "body".
     var onCursorBlock: ((String) -> Void)?
+    /// Distinct authors of pending tracked changes.
+    var onAuthors: (([String]) -> Void)?
+    /// The WebKit content process died; the shell must be rebuilt.
+    var onWebProcessTerminated: (() -> Void)?
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -103,7 +108,10 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     /// Paginated PDF export through the native print pipeline, so the
     /// editor page's @media print rules (keep images/tables whole, keep
     /// headings with their text) apply.
-    func exportPDF(to url: URL) {
+    private var pendingPDFURL: URL?
+    private var pendingPDFTitle: String?
+
+    func exportPDF(to url: URL, title: String? = nil) {
         let printInfo = NSPrintInfo()
         printInfo.horizontalPagination = .fit
         printInfo.verticalPagination = .automatic
@@ -117,13 +125,35 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
         let operation = webView.printOperation(with: printInfo)
         operation.showsPrintPanel = false
         operation.showsProgressPanel = true
+        if let title { operation.jobTitle = title }
         // WKWebView's print view starts zero-sized; give it the page rect.
         operation.view?.frame = NSRect(origin: .zero, size: printInfo.paperSize)
+        pendingPDFURL = url
+        pendingPDFTitle = title
         if let window = view.window {
-            operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+            operation.runModal(for: window, delegate: self,
+                               didRun: #selector(printOperationDidRun(_:success:contextInfo:)),
+                               contextInfo: nil)
         } else {
             operation.run()
+            stampPDFMetadata()
         }
+    }
+
+    @objc private func printOperationDidRun(_ operation: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
+        if success { stampPDFMetadata() }
+        pendingPDFURL = nil
+        pendingPDFTitle = nil
+    }
+
+    private func stampPDFMetadata() {
+        guard let url = pendingPDFURL, let document = PDFDocument(url: url) else { return }
+        var attrs = document.documentAttributes ?? [:]
+        attrs[PDFDocumentAttribute.titleAttribute] = pendingPDFTitle ?? url.deletingPathExtension().lastPathComponent
+        attrs[PDFDocumentAttribute.authorAttribute] = NSFullUserName()
+        attrs[PDFDocumentAttribute.creatorAttribute] = "Ashokan"
+        document.documentAttributes = attrs
+        document.write(to: url)
     }
 
     private static func jsonString(_ value: Any) -> String? {
@@ -149,6 +179,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
                 onDocChanged?(html, dict["markdown"] as? String, dict["words"] as? Int ?? 0)
             }
             onReviewCounts?(dict["changes"] as? Int ?? 0, dict["comments"] as? Int ?? 0)
+            onAuthors?(dict["authors"] as? [String] ?? [])
         case "commentClicked":
             if let text = dict["text"] as? String {
                 let left = dict["left"] as? Double ?? 0
@@ -169,12 +200,19 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
                 onStats?(words)
             }
             onReviewCounts?(dict["changes"] as? Int ?? 0, dict["comments"] as? Int ?? 0)
+            onAuthors?(dict["authors"] as? [String] ?? [])
         default:
             break
         }
     }
 
     // MARK: - WKNavigationDelegate
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        NSLog("Ashokan: WebKit content process terminated — recovering")
+        shellLoaded = false
+        onWebProcessTerminated?()
+    }
 
     func webView(
         _ webView: WKWebView,

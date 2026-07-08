@@ -17259,6 +17259,25 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         return ["br"];
       }
     },
+    // GFM task-list checkboxes — real, clickable, round-tripping to
+    // <input type="checkbox" checked> and "- [x]" in Markdown.
+    task_checkbox: {
+      group: "inline",
+      inline: true,
+      attrs: { checked: { default: false }, attrs: { default: {} } },
+      parseDOM: [{
+        tag: 'input[type="checkbox"]',
+        getAttrs: (d2) => ({
+          checked: d2.hasAttribute("checked") || d2.checked,
+          attrs: bagFromDOM(d2, ["checked", "type"])
+        })
+      }],
+      toDOM(node) {
+        const attrs = { ...bagToDOM(node), type: "checkbox" };
+        if (node.attrs.checked) attrs.checked = "checked";
+        return ["input", attrs];
+      }
+    },
     // Protected islands for markup we don't model. Round-trips byte-for-byte.
     html_block: {
       group: "block",
@@ -17481,6 +17500,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     ...CONTAINER_TAGS
   ]);
   var INLINE_RAW_TAGS = /* @__PURE__ */ new Set(["wbr", "label", "output", "data", "bdi", "bdo", "ruby", "button", "input", "select"]);
+  function isTaskCheckbox(el) {
+    return el.tagName.toLowerCase() === "input" && el.getAttribute("type") === "checkbox";
+  }
   var PHRASING_PARENTS = /* @__PURE__ */ new Set([
     "p",
     "h1",
@@ -17518,6 +17540,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       }
       if (child.nodeType !== Node.ELEMENT_NODE) continue;
       const tag = child.tagName.toLowerCase();
+      if (isTaskCheckbox(child)) continue;
       if (KNOWN_TAGS.has(tag)) {
         preprocess(child);
       } else {
@@ -17634,6 +17657,29 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       }
     };
   }
+  function taskCheckboxView(node, view2, getPos) {
+    let current = node;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "ashokan-task-checkbox";
+    input.checked = node.attrs.checked;
+    input.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      const tr = view2.state.tr;
+      tr.setMeta(SUGGEST_META, true);
+      tr.setNodeMarkup(getPos(), null, { ...current.attrs, checked: !current.attrs.checked });
+      view2.dispatch(tr);
+    });
+    return {
+      dom: input,
+      update(n) {
+        if (n.type !== current.type) return false;
+        current = n;
+        input.checked = n.attrs.checked;
+        return true;
+      }
+    };
+  }
   function insertImageFile(file, view2) {
     if (!file || !file.type.startsWith("image/")) return false;
     const reader = new FileReader();
@@ -17688,6 +17734,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const words = text.trim().split(/\s+/).filter(Boolean);
     return words.length;
   }
+  function changeAuthors(doc3) {
+    const authors = /* @__PURE__ */ new Set();
+    for (const change of collectChanges(doc3)) {
+      if (change.author) authors.add(change.author);
+    }
+    return [...authors];
+  }
   function notifyChange(state) {
     if (loading) return;
     const bodyHTML = serializeBodyHTML(state.doc);
@@ -17695,7 +17748,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       bodyHTML,
       words: wordCount(state.doc),
       changes: collectChanges(state.doc).length,
-      comments: collectComments(state.doc).length
+      comments: collectComments(state.doc).length,
+      authors: changeAuthors(state.doc)
     };
     if (isMarkdownDoc) payload.markdown = turndown.turndown(bodyHTML);
     post("docChanged", payload);
@@ -17837,6 +17891,26 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       return !result;
     });
     return result;
+  }
+  var previewMode = "markup";
+  var previewBanner = null;
+  function setPreviewMode(mode) {
+    previewMode = ["clean", "original"].includes(mode) ? mode : "markup";
+    document.body.classList.toggle("ashokan-preview-clean", previewMode === "clean");
+    document.body.classList.toggle("ashokan-preview-original", previewMode === "original");
+    if (view) view.setProps({ editable: () => previewMode === "markup" });
+    if (!previewBanner) {
+      previewBanner = document.createElement("div");
+      previewBanner.id = "ashokan-preview-banner";
+      document.body.appendChild(previewBanner);
+    }
+    if (previewMode === "markup") {
+      previewBanner.style.display = "none";
+    } else {
+      previewBanner.textContent = previewMode === "clean" ? "Previewing FINAL \u2014 markup hidden, still in the file \xB7 editing off" : "Previewing ORIGINAL \u2014 suggestions hidden, still in the file \xB7 editing off";
+      previewBanner.style.display = "block";
+    }
+    hideHoverChip();
   }
   var commentsMargin = false;
   var commentRail = null;
@@ -18024,7 +18098,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       nodeViews: {
         html_block: rawNodeView,
         html_inline: rawNodeView,
-        image: imageNodeView
+        image: imageNodeView,
+        task_checkbox: taskCheckboxView
       },
       transformPastedHTML(html) {
         const container = document.createElement("div");
@@ -18169,7 +18244,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         post("stats", {
           words: wordCount(view.state.doc),
           changes: collectChanges(view.state.doc).length,
-          comments: collectComments(view.state.doc).length
+          comments: collectComments(view.state.doc).length,
+          authors: changeAuthors(view.state.doc)
         });
       }
     },
@@ -18328,15 +18404,24 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       const change = changes.find((c) => c.from <= pos && pos <= c.to) || changeAtOrAfter(changes, pos, true);
       if (change) resolveChange(change, accept);
     },
-    acceptAllChanges() {
-      this._resolveAll(true);
+    // filter: undefined = everything; {selection: true} = overlapping the
+    // selection; {author: "Name"} = only that author's changes.
+    acceptAllChanges(filter) {
+      this._resolveAll(true, filter);
     },
-    rejectAllChanges() {
-      this._resolveAll(false);
+    rejectAllChanges(filter) {
+      this._resolveAll(false, filter);
     },
-    _resolveAll(accept) {
+    _resolveAll(accept, filter) {
       if (!view) return;
-      const changes = collectChanges(view.state.doc);
+      let changes = collectChanges(view.state.doc);
+      if (filter && filter.author !== void 0) {
+        changes = changes.filter((c) => c.author === filter.author);
+      }
+      if (filter && filter.selection) {
+        const { from: from2, to } = view.state.selection;
+        changes = changes.filter((c) => c.to > from2 && c.from < to);
+      }
       if (!changes.length) return;
       const tr = view.state.tr;
       tr.setMeta(SUGGEST_META, true);
@@ -18446,6 +18531,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     },
     setCommentsMargin(on) {
       setCommentsMargin(on);
+    },
+    // "markup" | "clean" | "original"
+    setPreviewMode(mode) {
+      setPreviewMode(mode);
+    },
+    getPreviewMode() {
+      return previewMode;
     },
     nextComment() {
       if (!view) return;

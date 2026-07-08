@@ -177,6 +177,26 @@ const nodes = {
     toDOM() { return ["br"] },
   },
 
+  // GFM task-list checkboxes — real, clickable, round-tripping to
+  // <input type="checkbox" checked> and "- [x]" in Markdown.
+  task_checkbox: {
+    group: "inline",
+    inline: true,
+    attrs: { checked: { default: false }, attrs: { default: {} } },
+    parseDOM: [{
+      tag: 'input[type="checkbox"]',
+      getAttrs: d => ({
+        checked: d.hasAttribute("checked") || d.checked,
+        attrs: bagFromDOM(d, ["checked", "type"]),
+      }),
+    }],
+    toDOM(node) {
+      const attrs = { ...bagToDOM(node), type: "checkbox" }
+      if (node.attrs.checked) attrs.checked = "checked"
+      return ["input", attrs]
+    },
+  },
+
   // Protected islands for markup we don't model. Round-trips byte-for-byte.
   html_block: {
     group: "block",
@@ -355,6 +375,11 @@ const KNOWN_TAGS = new Set([
 // Unknown tags that should be treated as inline islands.
 const INLINE_RAW_TAGS = new Set(["wbr", "label", "output", "data", "bdi", "bdo", "ruby", "button", "input", "select"])
 
+// Checkbox inputs are modeled as task_checkbox nodes; other inputs stay islands.
+function isTaskCheckbox(el) {
+  return el.tagName.toLowerCase() === "input" && el.getAttribute("type") === "checkbox"
+}
+
 // Parents that establish a phrasing (inline) context.
 const PHRASING_PARENTS = new Set([
   "p", "h1", "h2", "h3", "h4", "h5", "h6", "a", "span", "em", "i", "strong", "b",
@@ -375,6 +400,7 @@ function preprocess(root) {
     }
     if (child.nodeType !== Node.ELEMENT_NODE) continue
     const tag = child.tagName.toLowerCase()
+    if (isTaskCheckbox(child)) continue
     if (KNOWN_TAGS.has(tag)) {
       preprocess(child)
     } else {
@@ -530,6 +556,32 @@ function imageNodeView(node, view, getPos) {
   }
 }
 
+// Task checkboxes: clickable in the editor even when the source markup says
+// disabled (GFM renderers emit disabled inputs; the file keeps that attr).
+function taskCheckboxView(node, view, getPos) {
+  let current = node
+  const input = document.createElement("input")
+  input.type = "checkbox"
+  input.className = "ashokan-task-checkbox"
+  input.checked = node.attrs.checked
+  input.addEventListener("mousedown", event => {
+    event.preventDefault()
+    const tr = view.state.tr
+    tr.setMeta(SUGGEST_META, true)
+    tr.setNodeMarkup(getPos(), null, { ...current.attrs, checked: !current.attrs.checked })
+    view.dispatch(tr)
+  })
+  return {
+    dom: input,
+    update(n) {
+      if (n.type !== current.type) return false
+      current = n
+      input.checked = n.attrs.checked
+      return true
+    },
+  }
+}
+
 function insertImageFile(file, view) {
   if (!file || !file.type.startsWith("image/")) return false
   const reader = new FileReader()
@@ -599,6 +651,14 @@ function wordCount(doc) {
   return words.length
 }
 
+function changeAuthors(doc) {
+  const authors = new Set()
+  for (const change of collectChanges(doc)) {
+    if (change.author) authors.add(change.author)
+  }
+  return [...authors]
+}
+
 function notifyChange(state) {
   if (loading) return
   const bodyHTML = serializeBodyHTML(state.doc)
@@ -607,6 +667,7 @@ function notifyChange(state) {
     words: wordCount(state.doc),
     changes: collectChanges(state.doc).length,
     comments: collectComments(state.doc).length,
+    authors: changeAuthors(state.doc),
   }
   if (isMarkdownDoc) payload.markdown = turndown.turndown(bodyHTML)
   post("docChanged", payload)
@@ -781,6 +842,38 @@ function findQuote(doc, quote) {
 // Comments margin: every comment rendered as a card in the right margin,
 // aligned with its anchor text, stacked to avoid overlap.
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Preview modes: markup (default) | clean (as-if-all-accepted) | original
+// (as-if-all-rejected). Pure view layer — the file always keeps its markup.
+// The banner + read-only enforcement exist because Word's "No Markup" mode
+// is a documented source of "I thought it was clean" incidents.
+// ---------------------------------------------------------------------------
+
+let previewMode = "markup"
+let previewBanner = null
+
+function setPreviewMode(mode) {
+  previewMode = ["clean", "original"].includes(mode) ? mode : "markup"
+  document.body.classList.toggle("ashokan-preview-clean", previewMode === "clean")
+  document.body.classList.toggle("ashokan-preview-original", previewMode === "original")
+  if (view) view.setProps({ editable: () => previewMode === "markup" })
+
+  if (!previewBanner) {
+    previewBanner = document.createElement("div")
+    previewBanner.id = "ashokan-preview-banner"
+    document.body.appendChild(previewBanner)
+  }
+  if (previewMode === "markup") {
+    previewBanner.style.display = "none"
+  } else {
+    previewBanner.textContent = previewMode === "clean"
+      ? "Previewing FINAL — markup hidden, still in the file · editing off"
+      : "Previewing ORIGINAL — suggestions hidden, still in the file · editing off"
+    previewBanner.style.display = "block"
+  }
+  hideHoverChip()
+}
 
 let commentsMargin = false
 let commentRail = null
@@ -987,6 +1080,7 @@ function mount(doc) {
       html_block: rawNodeView,
       html_inline: rawNodeView,
       image: imageNodeView,
+      task_checkbox: taskCheckboxView,
     },
     transformPastedHTML(html) {
       const container = document.createElement("div")
@@ -1135,6 +1229,7 @@ window.Ashokan = {
         words: wordCount(view.state.doc),
         changes: collectChanges(view.state.doc).length,
         comments: collectComments(view.state.doc).length,
+        authors: changeAuthors(view.state.doc),
       })
     }
   },
@@ -1265,12 +1360,21 @@ window.Ashokan = {
     if (change) resolveChange(change, accept)
   },
 
-  acceptAllChanges() { this._resolveAll(true) },
-  rejectAllChanges() { this._resolveAll(false) },
+  // filter: undefined = everything; {selection: true} = overlapping the
+  // selection; {author: "Name"} = only that author's changes.
+  acceptAllChanges(filter) { this._resolveAll(true, filter) },
+  rejectAllChanges(filter) { this._resolveAll(false, filter) },
 
-  _resolveAll(accept) {
+  _resolveAll(accept, filter) {
     if (!view) return
-    const changes = collectChanges(view.state.doc)
+    let changes = collectChanges(view.state.doc)
+    if (filter && filter.author !== undefined) {
+      changes = changes.filter(c => c.author === filter.author)
+    }
+    if (filter && filter.selection) {
+      const { from, to } = view.state.selection
+      changes = changes.filter(c => c.to > from && c.from < to)
+    }
     if (!changes.length) return
     const tr = view.state.tr
     tr.setMeta(SUGGEST_META, true)
@@ -1382,6 +1486,10 @@ window.Ashokan = {
   },
 
   setCommentsMargin(on) { setCommentsMargin(on) },
+
+  // "markup" | "clean" | "original"
+  setPreviewMode(mode) { setPreviewMode(mode) },
+  getPreviewMode() { return previewMode },
 
   nextComment() {
     if (!view) return

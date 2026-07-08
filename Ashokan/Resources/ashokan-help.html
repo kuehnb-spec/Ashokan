@@ -58,7 +58,10 @@
 <p>Ashokan records suggestions as <strong>standard HTML</strong> — <code>&lt;ins&gt;</code> and <code>&lt;del&gt;</code> elements — so a document with pending edits still renders as redlines in any browser. Comments are <code>&lt;mark title="…"&gt;</code> elements, readable on hover anywhere.</p>
 <ul>
 <li><strong>Suggest mode</strong> — toggle <em>Suggest</em> in the format bar (⇧⌘E). Your typing, deletions, and pastes become tracked changes with your name on them.</li>
-<li><strong>Review bar</strong> — summon it anytime with the checklist button in the toolbar (or View &gt; Show Review Bar, ⇧⌘R); it also appears automatically whenever the document has pending changes or comments. Navigate (⌥⌘[ / ⌥⌘]), accept/reject one or all.</li>
+<li><strong>Review bar</strong> — summon it anytime with the checklist button in the toolbar (or View &gt; Show Review Bar, ⇧⌘R); it also appears automatically whenever the document has pending changes or comments. Navigate (⌥⌘[ / ⌥⌘]), accept/reject one at a time, or use the <strong>Accept All / Reject All menus</strong> to resolve everything, just the selection, or everything by one author (you vs. the AI).</li>
+<li><strong>Preview modes</strong> — the review bar's Markup / Final / Original control shows the document as-is, as if every suggestion were accepted, or as if all were rejected. View-only: an orange banner reminds you the markup is still in the file, and editing pauses until you return to Markup.</li>
+<li><strong>Task lists</strong> — GFM checkboxes (<code>- [ ]</code> in Markdown, checkbox inputs in HTML) are real and clickable; toggling writes back to the file.</li>
+<li><strong>Two writers, one file</strong> — if an agent rewrites the open document on disk, Ashokan reloads it automatically (status-bar notice); if you also had unsaved edits, it asks which version wins.</li>
 <li><strong>Hover a change</strong> — a ✓/✕ chip appears; accept or reject in place.</li>
 <li><strong>Comments</strong> — select text, Add Comment (⌥⌘M). Click a yellow highlight to read/edit/remove it. <em>Show All</em> lays every comment out as margin cards with Edit/Remove actions.</li>
 </ul>

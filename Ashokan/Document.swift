@@ -61,6 +61,61 @@ final class Document: NSDocument {
         return data
     }
 
+    // MARK: - External changes (the two-writers feature: an agent rewrites
+    // the file on disk while it's open here)
+
+    override func presentedItemDidChange() {
+        super.presentedItemDidChange()
+        DispatchQueue.main.async { [weak self] in
+            self?.handleExternalChange()
+        }
+    }
+
+    private func handleExternalChange() {
+        guard let url = fileURL,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let diskDate = attrs[.modificationDate] as? Date,
+              let knownDate = fileModificationDate,
+              diskDate.timeIntervalSince(knownDate) > 0.1 else { return }
+
+        if isDocumentEdited {
+            presentExternalChangeConflict(url: url, diskDate: diskDate)
+        } else {
+            reloadFromDisk(url: url)
+            documentWindowController?.flashStatus("Reloaded — file was changed on disk by another program")
+        }
+    }
+
+    private func reloadFromDisk(url: URL) {
+        try? revert(toContentsOf: url, ofType: fileType ?? "public.html")
+    }
+
+    private func presentExternalChangeConflict(url: URL, diskDate: Date) {
+        guard let window = documentWindowController?.window else {
+            // No UI to ask; keep the in-memory version and note the new date
+            // so we don't loop.
+            fileModificationDate = diskDate
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "File Changed on Disk"
+        alert.informativeText = "\(displayName ?? "This document") was modified by another program (probably an agent), but you also have unsaved edits here. Which version do you want?"
+        alert.addButton(withTitle: "Reload from Disk")
+        alert.addButton(withTitle: "Keep My Version")
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            if response == .alertFirstButtonReturn {
+                self.reloadFromDisk(url: url)
+                self.documentWindowController?.flashStatus("Reloaded from disk — your unsaved edits were discarded")
+            } else {
+                // Keep ours; adopt the disk date so this exact change stops
+                // re-prompting. Saving will overwrite the external version.
+                self.fileModificationDate = diskDate
+                self.documentWindowController?.flashStatus("Keeping your version — saving will overwrite the on-disk change")
+            }
+        }
+    }
+
     override func read(from data: Data, ofType typeName: String) throws {
         let text = String(data: data, encoding: .utf8)
             ?? String(data: data, encoding: .isoLatin1)

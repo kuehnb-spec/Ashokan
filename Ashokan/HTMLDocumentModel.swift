@@ -120,6 +120,17 @@ struct HTMLDocumentModel {
       th { background: #f4f5f7; }
       a { color: #1f6feb; }
       hr { border: none; border-top: 1px solid #e4e7ec; margin: 2em 0; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #1c1e22; color: #e6e8ed; }
+        blockquote { border-left-color: #3d434d; color: #a7b0be; }
+        pre { background: #14161a; border-color: #2c313a; }
+        code { background: #2a2f37; }
+        pre code { background: none; }
+        th { background: #262b33; }
+        th, td { border-color: #3d434d; }
+        a { color: #6ea8fe; }
+        hr { border-top-color: #3d434d; }
+      }
     </style>
     </head>
     <body>

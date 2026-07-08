@@ -212,6 +212,59 @@ final class Harness: NSObject, WKScriptMessageHandler {
                 if !ok { failures += 1 }
             }
             if failures > previousFailures { print("html: \(html)\nresult: \(applyResult)") }
+            self.runCorpusPhase(previousFailures: failures)
+        }
+    }
+
+    // Adversarial fixtures: the nastiest agent-generated markup we can
+    // think of must survive a load+serialize round-trip.
+    func runCorpusPhase(previousFailures: Int) {
+        let script = "<script>if (a < b && c > d) { emit(\"<tag>\"); }</script>"
+        let corpus = #"<p>Entities: &amp; &lt; &gt; stay escaped.</p>"#
+            + script
+            + #"<style>.x > .y::before { content: "<>"; }</style>"#
+            + #"<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="red"/></svg>"#
+            + #"<my-widget config='{"a": 1}'><inner-part>opaque</inner-part></my-widget>"#
+            + #"<ul><li><input type="checkbox" checked disabled> done task</li><li><input type="checkbox"> open task</li></ul>"#
+            + #"<form action="/x"><label>Name <input type="text" name="n"></label></form>"#
+            + #"<table class="wide"><tbody><tr><td>r1c1</td><td>r1c2</td><td>r1c3</td></tr><tr><td>r2c1</td><td>r2c2</td><td>r2c3</td></tr><tr><td>r3c1</td><td>r3c2</td><td>r3c3</td></tr></tbody></table>"#
+        let payload = try! JSONSerialization.data(
+            withJSONObject: ["bodyHTML": corpus, "headHTML": "", "bodyAttrs": [:], "hasOwnStyles": true]
+        )
+        let json = String(data: payload, encoding: .utf8)!
+        webView.evaluateJavaScript("window.Ashokan.loadDocument(\(json)); window.Ashokan.getBodyHTML()") { result, error in
+            if let error { fail("corpus evaluate error: \(error)") }
+            guard let html = result as? String else { fail("no corpus output"); return }
+            var failures = previousFailures
+            let checks: [(String, Bool)] = [
+                ("entities stay escaped", html.contains("&amp; &lt; &gt;")),
+                ("script island survives with raw <  > inside",
+                 html.contains(#"if (a < b && c > d) { emit("<tag>"); }"#)),
+                ("style island survives with selector combinators",
+                 html.contains(#".x > .y::before"#)),
+                ("svg island survives", html.contains(#"<circle cx="5" cy="5" r="4" fill="red">"#)
+                                     || html.contains(#"<circle cx="5" cy="5" r="4" fill="red"/>"#)
+                                     || html.contains(#"<circle cx="5" cy="5" r="4" fill="red"></circle>"#)),
+                ("custom element tree survives with JSON attribute",
+                 html.contains("<inner-part>opaque</inner-part>")
+                 && (html.contains(#"{"a": 1}"#) || html.contains("{&quot;a&quot;: 1}"))),
+                ("checked task checkbox round-trips",
+                 html.range(of: #"<input [^>]*type="checkbox"[^>]*checked"#, options: .regularExpression) != nil
+                 || html.range(of: #"<input [^>]*checked[^>]*type="checkbox""#, options: .regularExpression) != nil),
+                ("unchecked task checkbox has no checked attr",
+                 html.contains("open task") && {
+                     let parts = html.components(separatedBy: "open task")
+                     return parts.first?.components(separatedBy: "<input").last?.contains("checked") == false
+                 }()),
+                ("form island survives", html.contains(#"<form action="/x">"#) && html.contains(#"name="n""#)),
+                ("table keeps all 9 cells", (1...3).allSatisfy { r in (1...3).allSatisfy { c in html.contains("r\(r)c\(c)") } }),
+            ]
+            print("--- corpus phase ---")
+            for (name, ok) in checks {
+                print("\(ok ? "PASS" : "FAIL")  \(name)")
+                if !ok { failures += 1 }
+            }
+            if failures > previousFailures { print("corpus html: \(html)") }
             exit(failures == 0 ? 0 : 1)
         }
     }

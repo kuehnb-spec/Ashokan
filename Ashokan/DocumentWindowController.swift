@@ -17,6 +17,11 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     private var reviewAccessory: NSTitlebarAccessoryViewController!
     private var showingCommentsMargin = false
     private var showCommentsButton: NSButton!
+    private var acceptMenuButton: NSPopUpButton!
+    private var rejectMenuButton: NSPopUpButton!
+    private var previewControl: NSSegmentedControl!
+    private var changeAuthors: [String] = []
+    private var statusFlashUntil = Date.distantPast
 
     private var doc: Document { document as! Document }
 
@@ -108,6 +113,14 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     private func wireUp() {
         editorVC.onDocChanged = { [weak self] bodyHTML, markdown, words in
             guard let self else { return }
+            // Wipe guard: an empty body from a non-empty document means the
+            // editor bridge misfired, not that the user deleted everything
+            // (ProseMirror always serializes at least an empty paragraph).
+            if bodyHTML.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !self.doc.model.bodyHTML.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                NSLog("Ashokan: ignored suspicious empty-body update")
+                return
+            }
             if self.doc.format == .markdown {
                 self.doc.markdown = markdown ?? self.doc.markdown
             } else {
@@ -131,6 +144,16 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         }
         editorVC.onEditCommentRequested = { [weak self] in
             self?.presentEditCommentDialog()
+        }
+        editorVC.onAuthors = { [weak self] authors in
+            guard let self, authors != self.changeAuthors else { return }
+            self.changeAuthors = authors
+            self.rebuildBulkMenus()
+        }
+        editorVC.onWebProcessTerminated = { [weak self] in
+            guard let self else { return }
+            self.loadEditor()
+            self.flashStatus("Editor recovered after a WebKit crash — content restored")
         }
         editorVC.onCursorBlock = { [weak self] block in
             guard let popup = self?.stylePopup else { return }
@@ -233,6 +256,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
 
     private func updateStatusBar() {
         guard statusPathLabel != nil else { return }
+        guard Date() >= statusFlashUntil else { return }
         if let url = doc.fileURL {
             statusPathLabel.stringValue = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
             statusPathLabel.toolTip = url.path
@@ -391,13 +415,45 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
 
     @objc func exportPDF(_ sender: Any?) {
         guard let window else { return }
+        // Export-time review check: never let markup ship in a PDF unnoticed.
+        if pendingChanges > 0 || pendingComments > 0 {
+            let alert = NSAlert()
+            alert.messageText = "Pending Review Items"
+            var parts: [String] = []
+            if pendingChanges > 0 { parts.append("\(pendingChanges) suggested change\(pendingChanges == 1 ? "" : "s")") }
+            if pendingComments > 0 { parts.append("\(pendingComments) comment\(pendingComments == 1 ? "" : "s")") }
+            alert.informativeText = "This document has \(parts.joined(separator: " and ")). The PDF will match the current preview mode (\(currentPreviewMode == "markup" ? "markup visible" : currentPreviewMode))."
+            alert.addButton(withTitle: "Export as Shown")
+            alert.addButton(withTitle: "Accept All & Export")
+            alert.addButton(withTitle: "Cancel")
+            alert.beginSheetModal(for: window) { [weak self] response in
+                guard let self else { return }
+                switch response {
+                case .alertFirstButtonReturn:
+                    self.presentExportPanel()
+                case .alertSecondButtonReturn:
+                    self.editorVC.call("acceptAllChanges")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.presentExportPanel()
+                    }
+                default:
+                    break
+                }
+            }
+            return
+        }
+        presentExportPanel()
+    }
+
+    private func presentExportPanel() {
+        guard let window else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
         panel.isExtensionHidden = false
         panel.nameFieldStringValue = (doc.displayName as NSString).deletingPathExtension + ".pdf"
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
-            self.editorVC.exportPDF(to: url)
+            self.editorVC.exportPDF(to: url, title: (self.doc.displayName as NSString).deletingPathExtension)
         }
     }
 
@@ -832,14 +888,32 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         let flex = NSView()
         flex.setContentHuggingPriority(.init(1), for: .horizontal)
 
+        acceptMenuButton = NSPopUpButton(frame: .zero, pullsDown: true)
+        acceptMenuButton.isBordered = false
+        acceptMenuButton.controlSize = .small
+        rejectMenuButton = NSPopUpButton(frame: .zero, pullsDown: true)
+        rejectMenuButton.isBordered = false
+        rejectMenuButton.controlSize = .small
+        rebuildBulkMenus()
+
+        previewControl = NSSegmentedControl(labels: ["Markup", "Final", "Original"],
+                                            trackingMode: .selectOne,
+                                            target: self, action: #selector(previewModeChanged(_:)))
+        previewControl.controlSize = .small
+        previewControl.selectedSegment = 0
+        previewControl.toolTip = "Preview: with markup, as if all accepted (Final), or as if all rejected (Original). View-only — the file keeps its markup."
+
         let stack = NSStackView(views: [
             caption("Changes"),
             iconButton("chevron.left", "Previous Change (⌥⌘[)", #selector(reviewPreviousChange(_:))),
             iconButton("chevron.right", "Next Change (⌥⌘])", #selector(reviewNextChange(_:))),
             iconButton("checkmark", "Accept Change", #selector(reviewAcceptChange(_:))),
             iconButton("xmark", "Reject Change", #selector(reviewRejectChange(_:))),
-            textButton("Accept All", #selector(reviewAcceptAll(_:))),
-            textButton("Reject All", #selector(reviewRejectAll(_:))),
+            acceptMenuButton,
+            rejectMenuButton,
+            divider(),
+            caption("Preview"),
+            previewControl,
             divider(),
             caption("Comments"),
             iconButton("chevron.left", "Previous Comment", #selector(reviewPreviousComment(_:))),
@@ -875,6 +949,69 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     /// nil = automatic (show while suggesting or with pending review items);
     /// user toggling the Review button/menu takes explicit control.
     private var reviewBarOverride: Bool?
+
+    // MARK: - Bulk resolve menus and preview modes
+
+    private func rebuildBulkMenus() {
+        guard acceptMenuButton != nil else { return }
+        for (button, accept, title) in [(acceptMenuButton!, true, "Accept All"),
+                                        (rejectMenuButton!, false, "Reject All")] {
+            let menu = NSMenu()
+            menu.addItem(withTitle: title, action: nil, keyEquivalent: "")   // pulldown label
+            let addItem = { (label: String, scope: [String: Any]) in
+                let item = menu.addItem(withTitle: label,
+                                        action: #selector(self.bulkResolve(_:)), keyEquivalent: "")
+                item.target = self
+                var payload = scope
+                payload["accept"] = accept
+                item.representedObject = payload
+            }
+            addItem("All Changes", [:])
+            addItem("Changes in Selection", ["selection": true])
+            if !changeAuthors.isEmpty {
+                menu.addItem(.separator())
+                for author in changeAuthors {
+                    addItem("Everything by \(author)", ["author": author])
+                }
+            }
+            button.menu = menu
+        }
+    }
+
+    @objc private func bulkResolve(_ sender: NSMenuItem) {
+        guard let payload = sender.representedObject as? [String: Any],
+              let accept = payload["accept"] as? Bool else { return }
+        var filter: [String: Any] = [:]
+        if let selection = payload["selection"] as? Bool { filter["selection"] = selection }
+        if let author = payload["author"] as? String { filter["author"] = author }
+        let function = accept ? "acceptAllChanges" : "rejectAllChanges"
+        if filter.isEmpty {
+            editorVC.call(function)
+        } else {
+            editorVC.call(function, argument: filter)
+        }
+    }
+
+    @objc private func previewModeChanged(_ sender: NSSegmentedControl) {
+        let mode = ["markup", "clean", "original"][max(0, sender.selectedSegment)]
+        editorVC.call("setPreviewMode", argument: mode)
+    }
+
+    var currentPreviewMode: String {
+        ["markup", "clean", "original"][max(0, previewControl?.selectedSegment ?? 0)]
+    }
+
+    // MARK: - Status flash
+
+    func flashStatus(_ message: String) {
+        guard statusInfoLabel != nil else { return }
+        statusInfoLabel.stringValue = message
+        statusFlashUntil = Date().addingTimeInterval(4)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.1) { [weak self] in
+            guard let self, Date() >= self.statusFlashUntil else { return }
+            self.updateStatusBar()
+        }
+    }
 
     private func updateReviewBarVisibility() {
         let shouldShow = reviewBarOverride

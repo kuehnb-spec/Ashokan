@@ -63,6 +63,30 @@
     cursor: help;
   }
 
+  /* Preview modes: view-layer only; the markup never leaves the file. */
+  body.ashokan-preview-clean .ProseMirror del { display: none; }
+  body.ashokan-preview-clean .ProseMirror ins {
+    background: none; text-decoration: none;
+  }
+  body.ashokan-preview-original .ProseMirror ins { display: none; }
+  body.ashokan-preview-original .ProseMirror del {
+    background: none; text-decoration: none; color: inherit;
+  }
+  body.ashokan-preview-clean .ProseMirror mark[title],
+  body.ashokan-preview-original .ProseMirror mark[title] {
+    background: none; border-bottom: none; cursor: text;
+  }
+  #ashokan-preview-banner {
+    display: none; position: fixed; top: 10px; right: 14px; z-index: 100;
+    background: #b25000; color: #fff; font: 600 11.5px -apple-system, sans-serif;
+    letter-spacing: 0.02em; padding: 5px 14px; border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+  @media print { #ashokan-preview-banner { display: none !important; } }
+
+  /* Task checkboxes: clickable, aligned with text. */
+  .ashokan-task-checkbox { vertical-align: -2px; margin-right: 6px; cursor: pointer; }
+
   /* Comments margin: cards aligned with their anchors in the right rail. */
   body.ashokan-comments-margin #editor { padding-right: 240px; }
   #ashokan-comment-rail { position: absolute; top: 0; right: 0; width: 224px; z-index: 40; }
@@ -154,6 +178,20 @@
   body.ashokan-default-theme .ProseMirror th { background: #f4f5f7; }
   body.ashokan-default-theme .ProseMirror a { color: #1f6feb; }
   body.ashokan-default-theme .ProseMirror hr { border: none; border-top: 1px solid #e4e7ec; margin: 2em 0; }
+
+  @media (prefers-color-scheme: dark) {
+    body.ashokan-default-theme { background: #1c1e22; }
+    body.ashokan-default-theme .ProseMirror { color: #e6e8ed; }
+    body.ashokan-default-theme .ProseMirror blockquote { border-left-color: #3d434d; color: #a7b0be; }
+    body.ashokan-default-theme .ProseMirror pre { background: #14161a; border-color: #2c313a; color: #dde1e8; }
+    body.ashokan-default-theme .ProseMirror code { background: #2a2f37; }
+    body.ashokan-default-theme .ProseMirror pre code { background: none; }
+    body.ashokan-default-theme .ProseMirror th { background: #262b33; }
+    body.ashokan-default-theme .ProseMirror th, body.ashokan-default-theme .ProseMirror td { border-color: #3d434d; }
+    body.ashokan-default-theme .ProseMirror a { color: #6ea8fe; }
+    body.ashokan-default-theme .ProseMirror hr { border-top-color: #3d434d; }
+    body.ashokan-default-theme .ashokan-comment-card { background: #3a3419; border-color: #6b5d23; color: #e8dfae; }
+  }
 </style>
 </head>
 <body>
