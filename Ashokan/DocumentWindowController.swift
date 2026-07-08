@@ -382,8 +382,8 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         guard let window else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
-        panel.nameFieldStringValue = doc.displayName
-            .replacingOccurrences(of: ".html", with: "") + ".pdf"
+        panel.isExtensionHidden = false
+        panel.nameFieldStringValue = (doc.displayName as NSString).deletingPathExtension + ".pdf"
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url, let self else { return }
             self.editorVC.exportPDF(to: url)
