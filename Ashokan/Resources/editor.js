@@ -17291,6 +17291,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     text: { group: "inline" }
   };
   function rawElementFor(html, inline) {
+    if (html.trimStart().startsWith("<!--")) {
+      const carrier = document.createElement("ashokan-comment-node");
+      carrier.setAttribute("data-html", encodeURIComponent(html));
+      return carrier;
+    }
     const tpl = document.createElement("template");
     tpl.innerHTML = html;
     const el = tpl.content.firstElementChild;
@@ -17502,7 +17507,16 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     "sup"
   ]);
   function preprocess(root2) {
-    for (const child of Array.from(root2.children)) {
+    for (const child of Array.from(root2.childNodes)) {
+      if (child.nodeType === Node.COMMENT_NODE) {
+        const parentTag = child.parentElement ? child.parentElement.tagName.toLowerCase() : "";
+        const inline = PHRASING_PARENTS.has(parentTag);
+        const placeholder = document.createElement(inline ? "ashokan-raw-inline" : "ashokan-raw");
+        placeholder.setAttribute("data-html", encodeURIComponent("<!--" + child.data + "-->"));
+        child.replaceWith(placeholder);
+        continue;
+      }
+      if (child.nodeType !== Node.ELEMENT_NODE) continue;
       const tag = child.tagName.toLowerCase();
       if (KNOWN_TAGS.has(tag)) {
         preprocess(child);
@@ -17525,6 +17539,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const frag = DOMSerializer.fromSchema(schema).serializeFragment(doc3.content);
     const wrap2 = document.createElement("div");
     wrap2.appendChild(frag);
+    for (const carrier of wrap2.querySelectorAll("ashokan-comment-node")) {
+      const html = decodeURIComponent(carrier.getAttribute("data-html") || "").trim();
+      const data = html.startsWith("<!--") && html.endsWith("-->") ? html.slice(4, -3) : html;
+      carrier.replaceWith(document.createComment(data));
+    }
     for (const holder of wrap2.querySelectorAll("li, td, th")) {
       if (holder.children.length === 1 && holder.children[0].tagName === "P" && holder.children[0].attributes.length === 0 && holder.childNodes.length === 1) {
         const p = holder.children[0];
@@ -17549,7 +17568,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         table.appendChild(tbody);
       }
     }
-    return Array.from(wrap2.childNodes).map((n) => n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent).join("\n");
+    return Array.from(wrap2.childNodes).map((n) => {
+      if (n.nodeType === Node.ELEMENT_NODE) return n.outerHTML;
+      if (n.nodeType === Node.COMMENT_NODE) return "<!--" + n.textContent + "-->";
+      return n.textContent;
+    }).join("\n");
   }
   function rawNodeView(node) {
     const inline = node.type.name === "html_inline";
@@ -17783,6 +17806,30 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     });
     return comments;
   }
+  function findQuote(doc3, quote) {
+    let result = null;
+    doc3.descendants((node, pos) => {
+      if (result) return false;
+      if (!node.isTextblock) return true;
+      let text = "";
+      const map2 = [];
+      node.forEach((child, offset) => {
+        if (child.isText) {
+          for (let i = 0; i < child.text.length; i++) map2.push(pos + 1 + offset + i);
+          text += child.text;
+        } else {
+          map2.push(-1);
+          text += "\0";
+        }
+      });
+      const index = text.indexOf(quote);
+      if (index >= 0 && map2[index] >= 0) {
+        result = { from: map2[index], to: map2[index + quote.length - 1] + 1 };
+      }
+      return !result;
+    });
+    return result;
+  }
   function changeAtOrAfter(items, pos, wrap2) {
     if (!items.length) return null;
     return items.find((c) => c.to > pos) || (wrap2 ? items[0] : null);
@@ -17868,6 +17915,22 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         container.innerHTML = html;
         preprocess(container);
         return container.innerHTML;
+      },
+      handleClickOn(view2, pos, node, nodePos, event, direct) {
+        const $pos = view2.state.doc.resolve(pos);
+        const marks2 = $pos.marks();
+        const mark = schema.marks.comment.isInSet(marks2);
+        if (!mark) return false;
+        const bag = mark.attrs.attrs || {};
+        const coords = view2.coordsAtPos(pos);
+        post("commentClicked", {
+          text: bag.title || "",
+          author: bag["data-ashokan-author"] || "",
+          left: coords.left,
+          top: coords.top,
+          bottom: coords.bottom
+        });
+        return false;
       },
       handleTextInput(view2, from2, to, text) {
         if (!suggesting) return false;
@@ -18166,6 +18229,71 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       tr.setMeta(SUGGEST_META, true);
       tr.removeMark(comment.from, comment.to, schema.marks.comment);
       view.dispatch(tr);
+    },
+    editComment(newText) {
+      if (!view || !newText) return;
+      const pos = view.state.selection.from;
+      const comment = collectComments(view.state.doc).find((c) => c.from <= pos && pos <= c.to);
+      if (!comment) return;
+      const $pos = view.state.doc.resolve(Math.min(comment.from + 1, comment.to));
+      const existing = schema.marks.comment.isInSet($pos.marks());
+      const bag = { ...existing ? existing.attrs.attrs : {}, title: newText };
+      const tr = view.state.tr;
+      tr.setMeta(SUGGEST_META, true);
+      tr.removeMark(comment.from, comment.to, schema.marks.comment);
+      tr.addMark(comment.from, comment.to, schema.marks.comment.create({ attrs: bag }));
+      view.dispatch(tr);
+    },
+    // --- Agent edits: apply a model's quote-anchored suggestions as tracked
+    //     changes. Robust by construction: the document is never regenerated;
+    //     each edit is located by its exact quoted text and applied locally. ---
+    getDocText() {
+      return view ? view.state.doc.textBetween(0, view.state.doc.content.size, "\n", " ") : "";
+    },
+    // edits: [{quote, replacement?, comment?}]; author labels the suggestions.
+    applyAgentEdits(edits, author) {
+      if (!view) return { applied: 0, failed: [] };
+      let applied = 0;
+      const failed = [];
+      for (const edit of edits || []) {
+        if (!edit || !edit.quote) continue;
+        const range = findQuote(view.state.doc, edit.quote);
+        if (!range) {
+          failed.push(edit.quote);
+          continue;
+        }
+        const bag = { "data-ashokan-ts": (/* @__PURE__ */ new Date()).toISOString() };
+        if (author) bag["data-ashokan-author"] = author;
+        const tr = view.state.tr;
+        tr.setMeta(SUGGEST_META, true);
+        if (typeof edit.replacement === "string" && edit.replacement !== edit.quote) {
+          if (edit.replacement.length) {
+            tr.addMark(range.from, range.to, schema.marks.del.create({ attrs: bag }));
+            tr.insertText(edit.replacement, range.to, range.to);
+            tr.addMark(
+              range.to,
+              range.to + edit.replacement.length,
+              schema.marks.ins.create({ attrs: bag })
+            );
+          } else {
+            tr.addMark(range.from, range.to, schema.marks.del.create({ attrs: bag }));
+          }
+        }
+        if (edit.comment) {
+          tr.addMark(
+            range.from,
+            range.to,
+            schema.marks.comment.create({ attrs: { ...bag, title: edit.comment } })
+          );
+        }
+        if (tr.steps.length) {
+          view.dispatch(tr);
+          applied++;
+        } else {
+          failed.push(edit.quote);
+        }
+      }
+      return { applied, failed };
     },
     nextComment() {
       if (!view) return;

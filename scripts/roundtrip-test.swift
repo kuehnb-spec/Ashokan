@@ -164,6 +164,54 @@ final class Harness: NSObject, WKScriptMessageHandler {
             if failures > previousFailures {
                 print("roundtrip: \(roundtrip)\naccepted: \(accepted)\nrejected: \(rejected)")
             }
+            self.runAgentPhase(previousFailures: failures)
+        }
+    }
+
+    func runAgentPhase(previousFailures: Int) {
+        let body = #"<!-- ashokan-agent-instructions: be kind --><p>The quick brown fox jumps over the lazy dog near the river bank.</p>"#
+        let payload = try! JSONSerialization.data(
+            withJSONObject: ["bodyHTML": body, "headHTML": "", "bodyAttrs": [:], "hasOwnStyles": true]
+        )
+        let json = String(data: payload, encoding: .utf8)!
+        let edits = #"[{"quote": "quick brown fox", "replacement": "swift auburn fox", "comment": "more precise"}, {"quote": "lazy dog", "comment": "is the dog really lazy?"}, {"quote": "text that does not exist", "replacement": "x"}]"#
+        let script = """
+        (() => {
+          const out = {}
+          window.Ashokan.loadDocument(\(json))
+          out.result = window.Ashokan.applyAgentEdits(\(edits), "TestModel")
+          out.html = window.Ashokan.getBodyHTML()
+          return JSON.stringify(out)
+        })()
+        """
+        webView.evaluateJavaScript(script) { result, error in
+            if let error { fail("agent evaluate error: \(error)") }
+            guard let raw = result as? String,
+                  let data = raw.data(using: .utf8),
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let html = dict["html"] as? String,
+                  let applyResult = dict["result"] as? [String: Any]
+            else { fail("no agent output"); return }
+
+            var failures = previousFailures
+            let applied = applyResult["applied"] as? Int ?? -1
+            let failedCount = (applyResult["failed"] as? [Any])?.count ?? -1
+            let checks: [(String, Bool)] = [
+                ("HTML comment survives round-trip", html.contains("<!-- ashokan-agent-instructions: be kind -->")),
+                ("agent replacement applied as del+ins with author",
+                 html.contains(#"data-ashokan-author="TestModel""#)
+                 && html.range(of: #"<del [^>]*>.*quick brown fox.*</del>"#, options: .regularExpression) != nil
+                 && html.contains(">swift auburn fox</ins>")),
+                ("agent comment applied as mark with title",
+                 html.contains(#"title="is the dog really lazy?""#)),
+                ("unmatched quote reported, not applied", applied == 2 && failedCount == 1),
+            ]
+            print("--- agent phase ---")
+            for (name, ok) in checks {
+                print("\(ok ? "PASS" : "FAIL")  \(name)")
+                if !ok { failures += 1 }
+            }
+            if failures > previousFailures { print("html: \(html)\nresult: \(applyResult)") }
             exit(failures == 0 ? 0 : 1)
         }
     }

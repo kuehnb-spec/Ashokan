@@ -23,6 +23,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     var onStats: ((Int) -> Void)?
     /// (pending tracked changes, comments)
     var onReviewCounts: ((Int, Int) -> Void)?
+    /// (text, author, rect of the clicked comment in view coordinates)
+    var onCommentClicked: ((String, String, NSRect) -> Void)?
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -139,6 +141,15 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
                 onDocChanged?(html, dict["markdown"] as? String, dict["words"] as? Int ?? 0)
             }
             onReviewCounts?(dict["changes"] as? Int ?? 0, dict["comments"] as? Int ?? 0)
+        case "commentClicked":
+            if let text = dict["text"] as? String {
+                let left = dict["left"] as? Double ?? 0
+                let top = dict["top"] as? Double ?? 0
+                let bottom = dict["bottom"] as? Double ?? 0
+                // WKWebView is flipped, so JS client coords map directly.
+                let rect = NSRect(x: left, y: top, width: 2, height: max(2, bottom - top))
+                onCommentClicked?(text, dict["author"] as? String ?? "", rect)
+            }
         case "stats":
             if let words = dict["words"] as? Int {
                 onStats?(words)

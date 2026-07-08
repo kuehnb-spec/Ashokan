@@ -29,11 +29,11 @@
   "updated": "2026-07-07",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
-  "summary": "v0.4: REVIEW MODE shipped — the crown-jewel feature. Suggest toggle (format bar + ⇧⌘E) records edits as standard ins/del markup with author/timestamp (renders as redlines in any browser); comments as mark+title (hover to read anywhere); Review menu with next/prev change (⌥⌘[/]), accept/reject one or all, add/show/remove comments; status bar counts pending suggestions/comments; strict guarantee via transaction filter that no edit sneaks through untracked while suggesting. Fidelity harness 25/25 across HTML, Markdown, and review phases. samples/review-demo.html shows the agent-collab story. Known v1 limits: formatting/structural changes not tracked (blocked or untracked-Enter), rich paste in suggesting becomes plain text.",
+  "summary": "v0.5: the AI-collaboration release. (1) AI Review with local Ollama (Review menu, ⌥⌘R): model list from localhost:11434, suggestions returned as exact-quote JSON and applied as tracked changes with the model as author — pipeline verified live against qwen3:8b (15s, clean JSON, caught every planted error). (2) Add Agent Instructions…: embeds an invisible HTML-comment protocol block teaching Claude Code/Codex to propose edits as ins/del/mark. (3) Comments UX fixed: click a highlight → popover with text/author/Edit/Remove (hover tooltips were undiscoverable — Brant couldn't find them). (4) Fidelity fix: HTML comments in body now survive round-trip as invisible islands (they were being dropped). Harness 29/29 across four phases. App themes idea: skipped per Brant (macOS chrome constraints). Prior: review mode, workspace, Markdown, images/tables, PDF export, launcher, icon (Angle-Bracket Mountains).",
   "next": [
-    { "text": "Brant: try the review bar (auto-appears in review-demo.html) and check the new Dock icon (AonTheWater, masked via scripts/make-icon.swift).", "priority": "high" },
-    { "text": "Skins: view-level CSS themes (a skin = a CSS file), customize panel, 'bake skin into document' command. Design agreed in chat July 7.", "priority": "med" },
-    { "text": "Plugins: build the Ollama/local-LLM integration natively first (suggestions arrive as tracked changes), extract the plugin protocol from it after. Claude Code CLI integration second.", "priority": "med" },
+    { "text": "Brant: click a comment highlight (popover), run Review > AI Review with Local Model on review-demo.html, and try Add Agent Instructions… then point Claude Code at the file.", "priority": "high" },
+    { "text": "Document view presets (CSS presets for unstyled docs + 'bake into document'), the reframed skins idea.", "priority": "med" },
+    { "text": "Plugin protocol: extract from the Ollama integration; Claude Code CLI ('claude -p') as second consumer.", "priority": "med" },
     { "text": "Review v2: comment sidebar + threads, tracked formatting changes, per-author colors.", "priority": "med" },
     { "text": "Ship prep: Developer ID signing + notarization, Release build, public repo.", "priority": "med" }
   ],

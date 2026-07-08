@@ -63,6 +63,12 @@ swift scripts/roundtrip-test.swift   # headless fidelity checks on the real edit
 
 ## Features
 
+- **AI review, fully local** — Review → AI Review with Local Model sends the
+  document text to your own Ollama server (nothing leaves the Mac); the
+  model's suggestions apply as tracked changes with the model as author, for
+  you to accept or reject. Review → Add Agent Instructions… embeds an
+  invisible HTML-comment protocol block that teaches Claude Code / Codex to
+  propose edits as tracked changes when they open the file.
 - **Review mode** — toggle *Suggest* and every edit becomes a tracked change:
   standard `<ins>`/`<del>` markup with author and timestamp, so redlines render
   in any browser with no Ashokan required. Comments are `<mark title="…">` —

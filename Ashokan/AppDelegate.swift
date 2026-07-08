@@ -180,6 +180,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                            action: Selector(("reviewPreviousComment:")), keyEquivalent: "")
         reviewMenu.addItem(withTitle: "Next Comment",
                            action: Selector(("reviewNextComment:")), keyEquivalent: "")
+        reviewMenu.addItem(.separator())
+        let aiReview = reviewMenu.addItem(withTitle: "AI Review with Local Model…",
+                                          action: Selector(("aiReview:")), keyEquivalent: "r")
+        aiReview.keyEquivalentModifierMask = [.command, .option]
+        reviewMenu.addItem(withTitle: "Add Agent Instructions…",
+                           action: Selector(("addAgentInstructions:")), keyEquivalent: "")
         mainMenu.addItem(submenu: reviewMenu, title: "Review")
 
         // View

@@ -207,8 +207,16 @@ const nodes = {
   text: { group: "inline" },
 }
 
-// Build a real DOM element from preserved raw HTML, for serialization.
+// Build a DOM element from preserved raw HTML, for serialization.
+// ProseMirror's serializer only accepts elements, so preserved HTML comments
+// travel in a carrier element that serializeBodyHTML converts back into a
+// real comment node.
 function rawElementFor(html, inline) {
+  if (html.trimStart().startsWith("<!--")) {
+    const carrier = document.createElement("ashokan-comment-node")
+    carrier.setAttribute("data-html", encodeURIComponent(html))
+    return carrier
+  }
   const tpl = document.createElement("template")
   tpl.innerHTML = html
   const el = tpl.content.firstElementChild
@@ -354,7 +362,18 @@ const PHRASING_PARENTS = new Set([
 ])
 
 function preprocess(root) {
-  for (const child of Array.from(root.children)) {
+  for (const child of Array.from(root.childNodes)) {
+    if (child.nodeType === Node.COMMENT_NODE) {
+      // HTML comments carry agent instructions and annotations; preserve
+      // them as invisible islands instead of letting the parser drop them.
+      const parentTag = child.parentElement ? child.parentElement.tagName.toLowerCase() : ""
+      const inline = PHRASING_PARENTS.has(parentTag)
+      const placeholder = document.createElement(inline ? "ashokan-raw-inline" : "ashokan-raw")
+      placeholder.setAttribute("data-html", encodeURIComponent("<!--" + child.data + "-->"))
+      child.replaceWith(placeholder)
+      continue
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue
     const tag = child.tagName.toLowerCase()
     if (KNOWN_TAGS.has(tag)) {
       preprocess(child)
@@ -383,6 +402,15 @@ function serializeBodyHTML(doc) {
   const frag = DOMSerializer.fromSchema(schema).serializeFragment(doc.content)
   const wrap = document.createElement("div")
   wrap.appendChild(frag)
+
+  // Preserved HTML comments come back out of their carrier elements.
+  for (const carrier of wrap.querySelectorAll("ashokan-comment-node")) {
+    const html = decodeURIComponent(carrier.getAttribute("data-html") || "").trim()
+    const data = html.startsWith("<!--") && html.endsWith("-->")
+      ? html.slice(4, -3)
+      : html
+    carrier.replaceWith(document.createComment(data))
+  }
 
   // ProseMirror models list items and table cells as containing paragraphs.
   // If the only content is a single attribute-less <p>, unwrap it so
@@ -420,7 +448,11 @@ function serializeBodyHTML(doc) {
   }
 
   return Array.from(wrap.childNodes)
-    .map(n => n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent)
+    .map(n => {
+      if (n.nodeType === Node.ELEMENT_NODE) return n.outerHTML
+      if (n.nodeType === Node.COMMENT_NODE) return "<!--" + n.textContent + "-->"
+      return n.textContent
+    })
     .join("\n")
 }
 
@@ -708,6 +740,32 @@ function collectComments(doc) {
   return comments
 }
 
+/// Locates an exact quote within a single text block; returns {from, to}.
+function findQuote(doc, quote) {
+  let result = null
+  doc.descendants((node, pos) => {
+    if (result) return false
+    if (!node.isTextblock) return true
+    let text = ""
+    const map = []
+    node.forEach((child, offset) => {
+      if (child.isText) {
+        for (let i = 0; i < child.text.length; i++) map.push(pos + 1 + offset + i)
+        text += child.text
+      } else {
+        map.push(-1)
+        text += "\u{0}"
+      }
+    })
+    const index = text.indexOf(quote)
+    if (index >= 0 && map[index] >= 0) {
+      result = { from: map[index], to: map[index + quote.length - 1] + 1 }
+    }
+    return !result
+  })
+  return result
+}
+
 function changeAtOrAfter(items, pos, wrap) {
   if (!items.length) return null
   return items.find(c => c.to > pos) || (wrap ? items[0] : null)
@@ -796,6 +854,21 @@ function mount(doc) {
       container.innerHTML = html
       preprocess(container)
       return container.innerHTML
+    },
+    handleClickOn(view, pos, node, nodePos, event, direct) {
+      // Clicking a comment highlight surfaces the comment in the app shell.
+      const $pos = view.state.doc.resolve(pos)
+      const marks = $pos.marks()
+      const mark = schema.marks.comment.isInSet(marks)
+      if (!mark) return false
+      const bag = mark.attrs.attrs || {}
+      const coords = view.coordsAtPos(pos)
+      post("commentClicked", {
+        text: bag.title || "",
+        author: bag["data-ashokan-author"] || "",
+        left: coords.left, top: coords.top, bottom: coords.bottom,
+      })
+      return false
     },
     handleTextInput(view, from, to, text) {
       if (!suggesting) return false
@@ -1076,6 +1149,67 @@ window.Ashokan = {
     tr.setMeta(SUGGEST_META, true)
     tr.removeMark(comment.from, comment.to, schema.marks.comment)
     view.dispatch(tr)
+  },
+
+  editComment(newText) {
+    if (!view || !newText) return
+    const pos = view.state.selection.from
+    const comment = collectComments(view.state.doc)
+      .find(c => c.from <= pos && pos <= c.to)
+    if (!comment) return
+    const $pos = view.state.doc.resolve(Math.min(comment.from + 1, comment.to))
+    const existing = schema.marks.comment.isInSet($pos.marks())
+    const bag = { ...(existing ? existing.attrs.attrs : {}), title: newText }
+    const tr = view.state.tr
+    tr.setMeta(SUGGEST_META, true)
+    tr.removeMark(comment.from, comment.to, schema.marks.comment)
+    tr.addMark(comment.from, comment.to, schema.marks.comment.create({ attrs: bag }))
+    view.dispatch(tr)
+  },
+
+  // --- Agent edits: apply a model's quote-anchored suggestions as tracked
+  //     changes. Robust by construction: the document is never regenerated;
+  //     each edit is located by its exact quoted text and applied locally. ---
+
+  getDocText() {
+    return view ? view.state.doc.textBetween(0, view.state.doc.content.size, "\n", " ") : ""
+  },
+
+  // edits: [{quote, replacement?, comment?}]; author labels the suggestions.
+  applyAgentEdits(edits, author) {
+    if (!view) return { applied: 0, failed: [] }
+    let applied = 0
+    const failed = []
+    for (const edit of edits || []) {
+      if (!edit || !edit.quote) continue
+      const range = findQuote(view.state.doc, edit.quote)
+      if (!range) { failed.push(edit.quote); continue }
+      const bag = { "data-ashokan-ts": new Date().toISOString() }
+      if (author) bag["data-ashokan-author"] = author
+      const tr = view.state.tr
+      tr.setMeta(SUGGEST_META, true)
+      if (typeof edit.replacement === "string" && edit.replacement !== edit.quote) {
+        if (edit.replacement.length) {
+          tr.addMark(range.from, range.to, schema.marks.del.create({ attrs: bag }))
+          tr.insertText(edit.replacement, range.to, range.to)
+          tr.addMark(range.to, range.to + edit.replacement.length,
+                     schema.marks.ins.create({ attrs: bag }))
+        } else {
+          tr.addMark(range.from, range.to, schema.marks.del.create({ attrs: bag }))
+        }
+      }
+      if (edit.comment) {
+        tr.addMark(range.from, range.to,
+                   schema.marks.comment.create({ attrs: { ...bag, title: edit.comment } }))
+      }
+      if (tr.steps.length) {
+        view.dispatch(tr)
+        applied++
+      } else {
+        failed.push(edit.quote)
+      }
+    }
+    return { applied, failed }
   },
 
   nextComment() {

@@ -124,6 +124,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             self?.updateStatusBar()
             self?.updateReviewBarVisibility()
         }
+        editorVC.onCommentClicked = { [weak self] text, author, rect in
+            self?.showCommentPopover(text: text, author: author, at: rect)
+        }
         editorVC.onStats = { [weak self] words in
             self?.lastWordCount = words
             self?.updateStatusBar()
@@ -432,6 +435,75 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         }
     }
 
+    private var commentPopover: NSPopover?
+
+    private func showCommentPopover(text: String, author: String, at rect: NSRect) {
+        commentPopover?.close()
+
+        let content = NSViewController()
+        let textLabel = NSTextField(wrappingLabelWithString: text)
+        textLabel.font = .systemFont(ofSize: 13)
+        textLabel.preferredMaxLayoutWidth = 260
+
+        let authorLabel = NSTextField(labelWithString: author.isEmpty ? "Comment" : author)
+        authorLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        authorLabel.textColor = .secondaryLabelColor
+
+        let editButton = NSButton(title: "Edit…", target: self, action: #selector(editCommentFromPopover(_:)))
+        editButton.bezelStyle = .accessoryBarAction
+        editButton.controlSize = .small
+        let removeButton = NSButton(title: "Remove", target: self, action: #selector(removeCommentFromPopover(_:)))
+        removeButton.bezelStyle = .accessoryBarAction
+        removeButton.controlSize = .small
+        let buttons = NSStackView(views: [editButton, removeButton])
+        buttons.orientation = .horizontal
+        buttons.spacing = 8
+
+        let stack = NSStackView(views: [authorLabel, textLabel, buttons])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 12, right: 14)
+        content.view = stack
+
+        let popover = NSPopover()
+        popover.contentViewController = content
+        popover.behavior = .transient
+        popover.show(relativeTo: rect, of: editorVC.webView, preferredEdge: .maxY)
+        commentPopover = popover
+    }
+
+    @objc private func editCommentFromPopover(_ sender: Any?) {
+        commentPopover?.close()
+        guard let window else { return }
+        editorVC.webView.evaluateJavaScript("JSON.stringify(window.Ashokan.commentAtSelection())") { [weak self] result, _ in
+            var existing = ""
+            if let raw = result as? String, let data = raw.data(using: .utf8),
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String] {
+                existing = dict["text"] ?? ""
+            }
+            let alert = NSAlert()
+            alert.messageText = "Edit Comment"
+            alert.addButton(withTitle: "Save")
+            alert.addButton(withTitle: "Cancel")
+            let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 340, height: 60))
+            field.stringValue = existing
+            alert.accessoryView = field
+            alert.window.initialFirstResponder = field
+            alert.beginSheetModal(for: window) { response in
+                guard response == .alertFirstButtonReturn else { return }
+                let text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return }
+                self?.editorVC.call("editComment", argument: text)
+            }
+        }
+    }
+
+    @objc private func removeCommentFromPopover(_ sender: Any?) {
+        commentPopover?.close()
+        editorVC.call("removeComment")
+    }
+
     @objc func reviewShowComment(_ sender: Any?) {
         editorVC.webView.evaluateJavaScript("JSON.stringify(window.Ashokan.commentAtSelection())") { [weak self] result, _ in
             guard let self, let window = self.window else { return }
@@ -448,6 +520,148 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             }
             alert.beginSheetModal(for: window)
         }
+    }
+
+    // MARK: - Agent instructions & local AI review
+
+    @objc func addAgentInstructions(_ sender: Any?) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "Add Agent Instructions"
+        alert.informativeText = "Embeds an invisible instruction block (an HTML comment) that teaches AI agents like Claude Code to propose edits as tracked changes. What should the agent do?"
+        alert.addButton(withTitle: "Embed Instructions")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 48))
+        field.placeholderString = "Review for clarity, correctness, and tone. (default)"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self else { return }
+            self.embedAgentInstructions(task: field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+    }
+
+    private func embedAgentInstructions(task: String) {
+        let comment = AgentProtocol.instructionsComment(task: task)
+        if doc.format == .markdown {
+            doc.markdown = comment + "\n\n" + doc.markdown
+            editorVC.loadMarkdownDocument(doc.markdown)
+        } else if doc.model.isFragment {
+            doc.model.bodyHTML = comment + "\n" + doc.model.bodyHTML
+            editorVC.loadDocument(doc.model)
+        } else if let range = doc.model.prelude.range(of: "</head>", options: .caseInsensitive) {
+            doc.model.prelude.insert(contentsOf: comment + "\n", at: range.lowerBound)
+        } else {
+            doc.model.prelude += comment + "\n"
+        }
+        doc.updateChangeCount(.changeDone)
+        if !sourceItem.isCollapsed { sourceVC.setText(sourceText()) }
+        updateStatusBar()
+    }
+
+    @objc func aiReview(_ sender: Any?) {
+        guard let window else { return }
+        OllamaClient.shared.listModels { [weak self] models in
+            guard let self else { return }
+            guard !models.isEmpty else {
+                let alert = NSAlert()
+                alert.messageText = "Ollama Not Reachable"
+                alert.informativeText = "No local models found at \(OllamaClient.shared.baseURL.absoluteString). Make sure Ollama is running (and has at least one model pulled)."
+                alert.beginSheetModal(for: window)
+                return
+            }
+            self.presentAIReviewSheet(models: models)
+        }
+    }
+
+    private func presentAIReviewSheet(models: [String]) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "AI Review (Local Model)"
+        alert.informativeText = "The document never leaves this Mac. Suggestions arrive as tracked changes you accept or reject."
+        alert.addButton(withTitle: "Review")
+        alert.addButton(withTitle: "Cancel")
+
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 24), pullsDown: false)
+        popup.addItems(withTitles: models)
+        if let preferred = models.firstIndex(where: { $0.hasPrefix("qwen") }) {
+            popup.selectItem(at: preferred)
+        }
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 44))
+        field.placeholderString = "Review for clarity, correctness, and tone. (default)"
+        let stack = NSStackView(views: [popup, field])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.frame = NSRect(x: 0, y: 0, width: 360, height: 76)
+        alert.accessoryView = stack
+        alert.window.initialFirstResponder = field
+
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn, let self,
+                  let model = popup.selectedItem?.title else { return }
+            var task = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if task.isEmpty { task = "Review for clarity, correctness, and tone." }
+            self.runAIReview(model: model, task: task)
+        }
+    }
+
+    private func runAIReview(model: String, task: String) {
+        statusInfoLabel.stringValue = "AI review in progress (\(model))…"
+        editorVC.webView.evaluateJavaScript("window.Ashokan.getDocText()") { [weak self] result, _ in
+            guard let self, let docText = result as? String, !docText.isEmpty else {
+                self?.updateStatusBar()
+                return
+            }
+            let user = "REVIEW TASK: \(task)\n\nDOCUMENT:\n\(docText)"
+            OllamaClient.shared.chat(model: model, system: AgentProtocol.ollamaSystemPrompt, user: user) { chatResult in
+                switch chatResult {
+                case .failure(let error):
+                    self.updateStatusBar()
+                    self.presentReviewError(error.localizedDescription)
+                case .success(let content):
+                    guard let suggestions = OllamaClient.extractSuggestions(from: content), !suggestions.isEmpty else {
+                        self.updateStatusBar()
+                        self.presentReviewError("The model didn't return usable suggestions. Try again or try a different model.")
+                        return
+                    }
+                    self.applyAgentSuggestions(suggestions, author: model)
+                }
+            }
+        }
+    }
+
+    private func applyAgentSuggestions(_ suggestions: [[String: Any]], author: String) {
+        guard let window,
+              let editsData = try? JSONSerialization.data(withJSONObject: suggestions),
+              let editsJSON = String(data: editsData, encoding: .utf8) else { return }
+        let js = "JSON.stringify(window.Ashokan.applyAgentEdits(\(editsJSON), \(Self.json(author))))"
+        editorVC.webView.evaluateJavaScript(js) { [weak self] result, _ in
+            guard let self else { return }
+            self.updateStatusBar()
+            var applied = 0
+            var failed = 0
+            if let raw = result as? String, let data = raw.data(using: .utf8),
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                applied = dict["applied"] as? Int ?? 0
+                failed = (dict["failed"] as? [Any])?.count ?? 0
+            }
+            let alert = NSAlert()
+            alert.messageText = "AI Review Complete"
+            var info = "\(applied) suggestion\(applied == 1 ? "" : "s") applied as tracked changes — use the review bar to accept or reject each one."
+            if failed > 0 {
+                info += " \(failed) couldn't be matched to the document text and were skipped."
+            }
+            alert.informativeText = info
+            alert.beginSheetModal(for: window)
+        }
+    }
+
+    private func presentReviewError(_ message: String) {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "AI Review Failed"
+        alert.informativeText = message
+        alert.beginSheetModal(for: window)
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
