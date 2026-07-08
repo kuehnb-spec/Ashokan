@@ -17,6 +17,9 @@ elif [ ! -f Ashokan/Resources/editor.js ]; then
   exit 1
 fi
 
+# Bundle the current roadmap so Help > Roadmap always shows the live plan.
+cp docs/ROADMAP.html Ashokan/Resources/roadmap.html
+
 xcodegen
 # Version from the VERSION file; build number from the git commit count.
 MARKETING_VERSION="$(cat VERSION 2>/dev/null || echo 0.0.0)"

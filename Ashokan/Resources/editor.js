@@ -17862,7 +17862,26 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       author.textContent = comment.author || "Comment";
       const text = document.createElement("div");
       text.textContent = comment.text;
-      card.append(author, text);
+      const actions = document.createElement("div");
+      actions.className = "ashokan-comment-card-actions";
+      const editButton = document.createElement("button");
+      editButton.textContent = "Edit\u2026";
+      editButton.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        selectRange(comment.from, comment.to);
+        post("editCommentRequest", {});
+      });
+      const removeButton = document.createElement("button");
+      removeButton.textContent = "Remove";
+      removeButton.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        selectRange(comment.from, comment.to);
+        window.Ashokan.removeComment();
+      });
+      actions.append(editButton, removeButton);
+      card.append(author, text, actions);
       card.addEventListener("mousedown", (event) => {
         event.preventDefault();
         selectRange(comment.from, comment.to);

@@ -25,6 +25,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     var onReviewCounts: ((Int, Int) -> Void)?
     /// (text, author, rect of the clicked comment in view coordinates)
     var onCommentClicked: ((String, String, NSRect) -> Void)?
+    /// A margin card asked for the comment-edit dialog (selection already set).
+    var onEditCommentRequested: (() -> Void)?
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -150,6 +152,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
                 let rect = NSRect(x: left, y: top, width: 2, height: max(2, bottom - top))
                 onCommentClicked?(text, dict["author"] as? String ?? "", rect)
             }
+        case "editCommentRequest":
+            onEditCommentRequested?()
         case "stats":
             if let words = dict["words"] as? Int {
                 onStats?(words)

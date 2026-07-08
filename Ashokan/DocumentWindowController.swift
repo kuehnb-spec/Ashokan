@@ -129,6 +129,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         editorVC.onCommentClicked = { [weak self] text, author, rect in
             self?.showCommentPopover(text: text, author: author, at: rect)
         }
+        editorVC.onEditCommentRequested = { [weak self] in
+            self?.presentEditCommentDialog()
+        }
         editorVC.onStats = { [weak self] words in
             self?.lastWordCount = words
             self?.updateStatusBar()
@@ -481,6 +484,11 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
 
     @objc private func editCommentFromPopover(_ sender: Any?) {
         commentPopover?.close()
+        presentEditCommentDialog()
+    }
+
+    /// Shared comment-edit dialog; expects the selection to be inside the comment.
+    func presentEditCommentDialog() {
         guard let window else { return }
         editorVC.webView.evaluateJavaScript("JSON.stringify(window.Ashokan.commentAtSelection())") { [weak self] result, _ in
             var existing = ""

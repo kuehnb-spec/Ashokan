@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ashokan Help</title>
+<style>
+  body { font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         color: #1c1e21; max-width: 46em; margin: 0 auto; padding: 48px 56px 120px; }
+  h1 { font-size: 1.9em; letter-spacing: -0.02em; border-bottom: 2px solid #2a6f4e; padding-bottom: 0.3em; }
+  h2 { font-size: 1.35em; margin-top: 1.7em; color: #2a6f4e; }
+  h3 { font-size: 1.1em; margin-top: 1.3em; }
+  .meta { color: #667085; font-size: 0.9em; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th { background: #eef6f1; text-align: left; }
+  th, td { border: 1px solid #d0d5dd; padding: 6px 12px; }
+  code, kbd { font: 0.88em ui-monospace, "SF Mono", Menlo, monospace; background: #f4f5f7;
+         border-radius: 4px; padding: 0.1em 0.4em; }
+  .tip { background: #eef6f1; border: 1px solid #bcd8c9; border-radius: 8px; padding: 10px 16px; }
+</style>
+</head>
+<body>
+<h1>Ashokan Help</h1>
+<p class="meta">A simple, fast, native editor for HTML and Markdown documents. This help file is itself an Ashokan document — a plain HTML file you could open anywhere.</p>
+
+<h2>What Ashokan is</h2>
+<p>Ashokan lets you edit HTML files the way a word processor edits documents — while keeping the file plain, open HTML that renders in any browser. Its core promise is the <strong>lossless round-trip</strong>: Ashokan never rewrites what you didn't edit. Everything outside <code>&lt;body&gt;</code> is preserved byte-for-byte; every element keeps its attributes; markup Ashokan doesn't model (scripts, SVG, widgets) is carried as protected islands that render but can't be mangled.</p>
+
+<h2>Opening and saving</h2>
+<ul>
+<li>Open <code>.html</code>, <code>.htm</code>, <code>.md</code>, and <code>.markdown</code> files (File &gt; Open, drag onto the Dock icon, or double-click in Finder).</li>
+<li>The <strong>Welcome window</strong> shows recent documents with live thumbnails, plus your <strong>workspace folders</strong> — add the folders where you keep documents and browse them as cards. Reopen it anytime with the clock toolbar button or ⇧⌘1.</li>
+<li>Documents autosave in place; ⌘S saves explicitly. Multiple documents open as window tabs.</li>
+<li>Markdown files are edited in the same WYSIWYG view and <em>saved back as Markdown</em>.</li>
+</ul>
+
+<h2>Editing</h2>
+<table>
+<tr><th>Action</th><th>How</th></tr>
+<tr><td>Bold / Italic / Underline / Inline code</td><td>⌘B / ⌘I / ⌘U / ⌘E, or the format bar</td></tr>
+<tr><td>Title / Heading / Subheading / Body</td><td>⌘⌥1 … ⌘⌥3, ⌘⌥0, or the style menu in the format bar</td></tr>
+<tr><td>Lists, blockquote, code block</td><td>Format bar or Format menu (blockquote ⌘')</td></tr>
+<tr><td>Link</td><td>⌘K</td></tr>
+<tr><td>Markdown-style shortcuts</td><td>Type <code>#</code>+space for a heading, <code>-</code>+space for a list, <code>&gt;</code>+space for a quote, <code>```</code> for a code block</td></tr>
+<tr><td>Source view</td><td>⌘/ toggles a live HTML (or Markdown) source pane</td></tr>
+<tr><td>Zoom</td><td>⌘= / ⌘− / ⌘0</td></tr>
+</table>
+
+<h3>Images</h3>
+<p>Insert via ⇧⌘I, paste, or drag from Finder. Images embed as data URIs so the document stays one self-contained file. Click an image and drag the blue corner handle to resize; Format &gt; Image sets inline/float/centered.</p>
+
+<h3>Tables</h3>
+<p>Insert from the Table menu or the table dropdown in the format bar. Tab moves between cells; add/delete rows and columns, merge/split cells, toggle the header row, and drag column borders to resize.</p>
+
+<h3>PDF export</h3>
+<p>File &gt; Export as PDF… (⌥⌘P) produces a paginated PDF: images, tables, and code blocks never split across pages, and headings stay with their text.</p>
+
+<h2>Review: tracked changes and comments</h2>
+<p>Ashokan records suggestions as <strong>standard HTML</strong> — <code>&lt;ins&gt;</code> and <code>&lt;del&gt;</code> elements — so a document with pending edits still renders as redlines in any browser. Comments are <code>&lt;mark title="…"&gt;</code> elements, readable on hover anywhere.</p>
+<ul>
+<li><strong>Suggest mode</strong> — toggle <em>Suggest</em> in the format bar (⇧⌘E). Your typing, deletions, and pastes become tracked changes with your name on them.</li>
+<li><strong>Review bar</strong> — appears automatically whenever the document has pending changes or comments: navigate (⌥⌘[ / ⌥⌘]), accept/reject one or all.</li>
+<li><strong>Hover a change</strong> — a ✓/✕ chip appears; accept or reject in place.</li>
+<li><strong>Comments</strong> — select text, Add Comment (⌥⌘M). Click a yellow highlight to read/edit/remove it. <em>Show All</em> lays every comment out as margin cards with Edit/Remove actions.</li>
+</ul>
+
+<h2>AI review — local models</h2>
+<p>Review &gt; <strong>AI Review with Local Model…</strong> (⌥⌘R) sends the document text to your own Ollama server at <code>localhost:11434</code> — nothing leaves your Mac. The model's suggestions arrive as tracked changes with the model named as author; accept or reject each like any other reviewer's work.</p>
+
+<h2>Working with AI agents (Claude Code, Codex, etc.)</h2>
+<p>Review &gt; <strong>Add Agent Instructions…</strong> embeds an invisible instruction block (an HTML comment) that teaches any AI agent the tracked-changes protocol. Then tell your agent: <em>"Review ~/path/to/file.html and follow its embedded instructions."</em> Its edits arrive as redlines in Ashokan.</p>
+<div class="tip"><p>Agents can also read the machine-oriented guide bundled with the app: Help &gt; <strong>Agent Guide</strong>, or point them at <code>/Applications/Ashokan.app/Contents/Resources/AGENTS.md</code>.</p></div>
+
+<h2>Troubleshooting</h2>
+<ul>
+<li><strong>A widget or styled block won't edit:</strong> it's a protected island (markup Ashokan doesn't model). Edit it in the source pane (⌘/).</li>
+<li><strong>Formatting buttons do nothing:</strong> you're in Suggest mode — formatting changes can't yet be tracked, so they're blocked rather than applied silently. Toggle Suggest off.</li>
+<li><strong>AI Review says Ollama isn't reachable:</strong> start Ollama and confirm <code>localhost:11434</code> answers; at least one model must be pulled.</li>
+<li><strong>This help file is locked:</strong> it lives inside the app bundle. Duplicate it (File &gt; Save As…) to experiment on it.</li>
+</ul>
+</body>
+</html>

@@ -10,6 +10,9 @@ DerivedData/
 # JS dependencies (the built bundle Ashokan/Resources/editor.js IS committed)
 editor/node_modules/
 
+# Generated at build time (copy of docs/ROADMAP.html)
+Ashokan/Resources/roadmap.html
+
 # macOS noise
 .DS_Store
 xcuserdata/

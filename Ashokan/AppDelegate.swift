@@ -13,7 +13,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The small delay lets file-open events delivered around launch win.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             if NSDocumentController.shared.documents.isEmpty {
-                WelcomeWindowController.shared.show()
+                if OnboardingWindowController.hasOnboarded {
+                    WelcomeWindowController.shared.show()
+                } else {
+                    OnboardingWindowController.shared.show()
+                }
             }
         }
     }
@@ -227,7 +231,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(submenu: windowMenu, title: "Window")
         NSApp.windowsMenu = windowMenu
 
+        // Help
+        let helpMenu = NSMenu(title: "Help")
+        helpMenu.addItem(withTitle: "Ashokan Help",
+                         action: #selector(openBundledDoc(_:)), keyEquivalent: "?")
+            .representedObject = "ashokan-help.html"
+        helpMenu.addItem(withTitle: "Agent Guide (for Claude Code & friends)",
+                         action: #selector(openBundledDoc(_:)), keyEquivalent: "")
+            .representedObject = "AGENTS.md"
+        helpMenu.addItem(withTitle: "Roadmap & Plans",
+                         action: #selector(openBundledDoc(_:)), keyEquivalent: "")
+            .representedObject = "roadmap.html"
+        helpMenu.addItem(.separator())
+        helpMenu.addItem(withTitle: "Show Onboarding Tour",
+                         action: #selector(showOnboarding(_:)), keyEquivalent: "")
+        for item in helpMenu.items where item.action == #selector(openBundledDoc(_:))
+            || item.action == #selector(showOnboarding(_:)) {
+            item.target = self
+        }
+        mainMenu.addItem(submenu: helpMenu, title: "Help")
+        NSApp.helpMenu = helpMenu
+
         return mainMenu
+    }
+
+    @objc func openBundledDoc(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        let parts = name.split(separator: ".", maxSplits: 1).map(String.init)
+        guard parts.count == 2,
+              let url = Bundle.main.url(forResource: parts[0], withExtension: parts[1]) else { return }
+        NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, error in
+            if let error { NSApp.presentError(error) }
+        }
+    }
+
+    @objc func showOnboarding(_ sender: Any?) {
+        OnboardingWindowController.shared.show()
     }
 
     private func addStyleItem(_ menu: NSMenu, _ title: String, _ selector: String, _ key: String) {
