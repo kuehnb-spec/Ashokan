@@ -17591,6 +17591,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const applyAttrs = (n) => {
       for (const a of Array.from(img.attributes)) img.removeAttribute(a.name);
       for (const [k, v2] of Object.entries(n.attrs.attrs || {})) img.setAttribute(k, v2);
+      wrap2.style.float = img.style.float || "";
+      if (img.style.display === "block") {
+        wrap2.style.display = "block";
+        wrap2.style.width = "100%";
+      } else {
+        wrap2.style.display = "";
+        wrap2.style.width = "";
+      }
     };
     applyAttrs(node);
     const handle = document.createElement("span");
@@ -18108,6 +18116,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
           notifyChange(newState);
           layoutCommentMargin();
           hideHoverChip();
+        }
+        if (tr.docChanged || tr.selectionSet) {
+          const parent = newState.selection.$from.parent;
+          let block = "body";
+          if (parent.type === schema.nodes.heading) block = "h" + parent.attrs.level;
+          else if (parent.type === schema.nodes.code_block) block = "code";
+          post("cursorBlock", { block });
         }
       }
     });

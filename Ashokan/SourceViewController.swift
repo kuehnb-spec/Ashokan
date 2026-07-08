@@ -27,9 +27,16 @@ final class SourceViewController: NSViewController, NSTextViewDelegate {
         view = scrollView
     }
 
-    var text: String { textView.string }
+    // The pane starts collapsed, so the view may not exist yet when the
+    // document first pushes text — load on demand (a nil textView here
+    // crashed the app; caught by the QA sweep).
+    var text: String {
+        loadViewIfNeeded()
+        return textView.string
+    }
 
     func setText(_ text: String) {
+        loadViewIfNeeded()
         guard textView.string != text else { return }
         programmaticUpdate = true
         textView.string = text
@@ -37,7 +44,7 @@ final class SourceViewController: NSViewController, NSTextViewDelegate {
     }
 
     var isEditing: Bool {
-        view.window?.firstResponder === textView
+        isViewLoaded && view.window?.firstResponder === textView
     }
 
     // MARK: - NSTextViewDelegate

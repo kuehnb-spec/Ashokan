@@ -27,6 +27,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
     var onCommentClicked: ((String, String, NSRect) -> Void)?
     /// A margin card asked for the comment-edit dialog (selection already set).
     var onEditCommentRequested: (() -> Void)?
+    /// Cursor moved into a block: "h1"…"h6", "code", or "body".
+    var onCursorBlock: ((String) -> Void)?
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -34,6 +36,10 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
         // Allow the document's relative images/stylesheets (file URLs next to
         // the document) to load inside the editor page.
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+
+        // System inline predictive text silently rewrites words mid-typing
+        // (QA saw "formatme" become "Format"); a document editor shouldn't.
+        config.allowsInlinePredictions = false
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -154,6 +160,10 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
             }
         case "editCommentRequest":
             onEditCommentRequested?()
+        case "cursorBlock":
+            if let block = dict["block"] as? String {
+                onCursorBlock?(block)
+            }
         case "stats":
             if let words = dict["words"] as? Int {
                 onStats?(words)

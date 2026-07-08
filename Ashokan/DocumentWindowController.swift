@@ -132,6 +132,17 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         editorVC.onEditCommentRequested = { [weak self] in
             self?.presentEditCommentDialog()
         }
+        editorVC.onCursorBlock = { [weak self] block in
+            guard let popup = self?.stylePopup else { return }
+            switch block {
+            case "h1": popup.selectItem(at: 0)
+            case "h2": popup.selectItem(at: 1)
+            case "h3": popup.selectItem(at: 2)
+            case "code": popup.selectItem(at: 4)
+            case "body": popup.selectItem(at: 3)
+            default: popup.select(nil)   // h4–h6 have no popup entry
+            }
+        }
         editorVC.onStats = { [weak self] words in
             self?.lastWordCount = words
             self?.updateStatusBar()

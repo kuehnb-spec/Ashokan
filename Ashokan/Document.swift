@@ -47,6 +47,12 @@ final class Document: NSDocument {
         }
     }
 
+    // Offer only the document's own format in save panels: data(ofType:)
+    // writes by self.format, so a cross-format choice would mislabel content.
+    override func writableTypes(for saveOperation: NSDocument.SaveOperationType) -> [String] {
+        format == .markdown ? ["net.daringfireball.markdown"] : ["public.html"]
+    }
+
     override func data(ofType typeName: String) throws -> Data {
         let text = format == .markdown ? markdown : model.assembled()
         guard let data = text.data(using: .utf8) else {

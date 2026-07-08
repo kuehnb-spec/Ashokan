@@ -481,6 +481,17 @@ function imageNodeView(node, view, getPos) {
   const applyAttrs = n => {
     for (const a of Array.from(img.attributes)) img.removeAttribute(a.name)
     for (const [k, v] of Object.entries(n.attrs.attrs || {})) img.setAttribute(k, v)
+    // The resize wrapper is the element the text actually flows around, so
+    // layout styles on the img must be mirrored onto it — otherwise floats
+    // and centering serialize correctly but never show in the canvas.
+    wrap.style.float = img.style.float || ""
+    if (img.style.display === "block") {
+      wrap.style.display = "block"
+      wrap.style.width = "100%"
+    } else {
+      wrap.style.display = ""
+      wrap.style.width = ""
+    }
   }
   applyAttrs(node)
   const handle = document.createElement("span")
@@ -1064,6 +1075,13 @@ function mount(doc) {
         notifyChange(newState)
         layoutCommentMargin()
         hideHoverChip()   // positions are stale after any edit
+      }
+      if (tr.docChanged || tr.selectionSet) {
+        const parent = newState.selection.$from.parent
+        let block = "body"
+        if (parent.type === schema.nodes.heading) block = "h" + parent.attrs.level
+        else if (parent.type === schema.nodes.code_block) block = "code"
+        post("cursorBlock", { block })
       }
     },
   })
