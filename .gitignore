@@ -16,3 +16,6 @@ Ashokan/Resources/roadmap.html
 # macOS noise
 .DS_Store
 xcuserdata/
+
+# Local release artifacts (published via gh release)
+dist/
