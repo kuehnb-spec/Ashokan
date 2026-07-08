@@ -684,6 +684,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         if menuItem.action == #selector(toggleCommentsMargin(_:)) {
             menuItem.state = showingCommentsMargin ? .on : .off
         }
+        if menuItem.action == #selector(toggleReviewBar(_:)) {
+            menuItem.state = isReviewBarVisible ? .on : .off
+        }
         return true
     }
 
@@ -869,12 +872,24 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         return bar
     }
 
+    /// nil = automatic (show while suggesting or with pending review items);
+    /// user toggling the Review button/menu takes explicit control.
+    private var reviewBarOverride: Bool?
+
     private func updateReviewBarVisibility() {
-        let shouldShow = suggesting || pendingChanges > 0 || pendingComments > 0
+        let shouldShow = reviewBarOverride
+            ?? (suggesting || pendingChanges > 0 || pendingComments > 0)
         if reviewAccessory.isHidden == shouldShow {
             reviewAccessory.isHidden = !shouldShow
         }
     }
+
+    @objc func toggleReviewBar(_ sender: Any?) {
+        reviewBarOverride = reviewAccessory.isHidden
+        updateReviewBarVisibility()
+    }
+
+    var isReviewBarVisible: Bool { !reviewAccessory.isHidden }
 
     // MARK: - Zoom
 
@@ -888,12 +903,13 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         static let save = NSToolbarItem.Identifier("ashokan.save")
         static let exportPDF = NSToolbarItem.Identifier("ashokan.exportPDF")
         static let recents = NSToolbarItem.Identifier("ashokan.recents")
+        static let review = NSToolbarItem.Identifier("ashokan.review")
         static let source = NSToolbarItem.Identifier("ashokan.source")
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [ItemID.save, ItemID.exportPDF, ItemID.recents,
-         .flexibleSpace, ItemID.source]
+         .flexibleSpace, ItemID.review, ItemID.source]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -919,6 +935,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
                               action: Selector(("showWelcome:")))
             item.target = nil   // responder chain → the app delegate
             return item
+        case ItemID.review:
+            return button(identifier, symbol: "checklist", label: "Review Bar",
+                          action: #selector(toggleReviewBar(_:)))
         case ItemID.source:
             return button(identifier, symbol: "curlybraces", label: "Source", action: #selector(toggleSourcePane(_:)))
         default:

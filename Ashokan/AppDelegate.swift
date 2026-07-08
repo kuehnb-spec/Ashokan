@@ -195,6 +195,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // View
         let viewMenu = NSMenu(title: "View")
         viewMenu.addItem(withTitle: "Toggle Source", action: Selector(("toggleSourcePane:")), keyEquivalent: "/")
+        let reviewBar = viewMenu.addItem(withTitle: "Show Review Bar",
+                                         action: Selector(("toggleReviewBar:")), keyEquivalent: "r")
+        reviewBar.keyEquivalentModifierMask = [.command, .shift]
         viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Zoom In", action: Selector(("zoomIn:")), keyEquivalent: "=")
         viewMenu.addItem(withTitle: "Zoom Out", action: Selector(("zoomOut:")), keyEquivalent: "-")
