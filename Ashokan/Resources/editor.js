@@ -17830,6 +17830,50 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     });
     return result;
   }
+  var commentsMargin = false;
+  var commentRail = null;
+  function setCommentsMargin(on) {
+    commentsMargin = !!on;
+    document.body.classList.toggle("ashokan-comments-margin", commentsMargin);
+    layoutCommentMargin();
+  }
+  function layoutCommentMargin() {
+    if (commentRail) {
+      commentRail.remove();
+      commentRail = null;
+    }
+    if (!commentsMargin || !view) return;
+    const comments = collectComments(view.state.doc);
+    if (!comments.length) return;
+    commentRail = document.createElement("div");
+    commentRail.id = "ashokan-comment-rail";
+    document.body.appendChild(commentRail);
+    let previousBottom = 0;
+    for (const comment of comments) {
+      let anchorTop = 0;
+      try {
+        anchorTop = view.coordsAtPos(comment.from).top + window.scrollY;
+      } catch (e) {
+      }
+      const card = document.createElement("div");
+      card.className = "ashokan-comment-card";
+      const author = document.createElement("div");
+      author.className = "ashokan-comment-card-author";
+      author.textContent = comment.author || "Comment";
+      const text = document.createElement("div");
+      text.textContent = comment.text;
+      card.append(author, text);
+      card.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        selectRange(comment.from, comment.to);
+      });
+      commentRail.appendChild(card);
+      const top = Math.max(anchorTop, previousBottom + 8);
+      card.style.top = top + "px";
+      previousBottom = top + card.offsetHeight;
+    }
+  }
+  window.addEventListener("resize", () => layoutCommentMargin());
   function changeAtOrAfter(items, pos, wrap2) {
     if (!items.length) return null;
     return items.find((c) => c.to > pos) || (wrap2 ? items[0] : null);
@@ -17975,7 +18019,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       dispatchTransaction(tr) {
         const newState = view.state.apply(tr);
         view.updateState(newState);
-        if (tr.docChanged) notifyChange(newState);
+        if (tr.docChanged) {
+          notifyChange(newState);
+          layoutCommentMargin();
+        }
       }
     });
   }
@@ -18016,6 +18063,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       } finally {
         loading = false;
       }
+      layoutCommentMargin();
       if (view) {
         post("stats", {
           words: wordCount(view.state.doc),
@@ -18294,6 +18342,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         }
       }
       return { applied, failed };
+    },
+    setCommentsMargin(on) {
+      setCommentsMargin(on);
     },
     nextComment() {
       if (!view) return;

@@ -15,6 +15,8 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     private var suggesting = false
     private var suggestButton: NSButton!
     private var reviewAccessory: NSTitlebarAccessoryViewController!
+    private var showingCommentsMargin = false
+    private var showCommentsButton: NSButton!
 
     private var doc: Document { document as! Document }
 
@@ -504,22 +506,10 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         editorVC.call("removeComment")
     }
 
-    @objc func reviewShowComment(_ sender: Any?) {
-        editorVC.webView.evaluateJavaScript("JSON.stringify(window.Ashokan.commentAtSelection())") { [weak self] result, _ in
-            guard let self, let window = self.window else { return }
-            let alert = NSAlert()
-            if let raw = result as? String,
-               let data = raw.data(using: .utf8),
-               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-               let text = dict["text"] {
-                alert.messageText = dict["author"].flatMap { $0.isEmpty ? nil : "Comment — \($0)" } ?? "Comment"
-                alert.informativeText = text
-            } else {
-                alert.messageText = "No Comment Here"
-                alert.informativeText = "Place the cursor inside highlighted text to view its comment."
-            }
-            alert.beginSheetModal(for: window)
-        }
+    @objc func toggleCommentsMargin(_ sender: Any?) {
+        showingCommentsMargin.toggle()
+        showCommentsButton?.state = showingCommentsMargin ? .on : .off
+        editorVC.call("setCommentsMargin", argument: showingCommentsMargin)
     }
 
     // MARK: - Agent instructions & local AI review
@@ -667,6 +657,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(toggleSuggesting(_:)) {
             menuItem.state = suggesting ? .on : .off
+        }
+        if menuItem.action == #selector(toggleCommentsMargin(_:)) {
+            menuItem.state = showingCommentsMargin ? .on : .off
         }
         return true
     }
@@ -826,7 +819,13 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             iconButton("chevron.left", "Previous Comment", #selector(reviewPreviousComment(_:))),
             iconButton("chevron.right", "Next Comment", #selector(reviewNextComment(_:))),
             textButton("Add…", #selector(reviewAddComment(_:))),
-            textButton("Show", #selector(reviewShowComment(_:))),
+            {
+                let button = textButton("Show All", #selector(toggleCommentsMargin(_:)))
+                button.setButtonType(.pushOnPushOff)
+                button.toolTip = "Show every comment as a card in the margin"
+                showCommentsButton = button
+                return button
+            }(),
             textButton("Remove", #selector(reviewRemoveComment(_:))),
             flex,
         ])

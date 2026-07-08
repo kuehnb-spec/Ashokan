@@ -766,6 +766,58 @@ function findQuote(doc, quote) {
   return result
 }
 
+// ---------------------------------------------------------------------------
+// Comments margin: every comment rendered as a card in the right margin,
+// aligned with its anchor text, stacked to avoid overlap.
+// ---------------------------------------------------------------------------
+
+let commentsMargin = false
+let commentRail = null
+
+function setCommentsMargin(on) {
+  commentsMargin = !!on
+  document.body.classList.toggle("ashokan-comments-margin", commentsMargin)
+  layoutCommentMargin()
+}
+
+function layoutCommentMargin() {
+  if (commentRail) { commentRail.remove(); commentRail = null }
+  if (!commentsMargin || !view) return
+  const comments = collectComments(view.state.doc)
+  if (!comments.length) return
+
+  commentRail = document.createElement("div")
+  commentRail.id = "ashokan-comment-rail"
+  document.body.appendChild(commentRail)
+
+  let previousBottom = 0
+  for (const comment of comments) {
+    let anchorTop = 0
+    try {
+      anchorTop = view.coordsAtPos(comment.from).top + window.scrollY
+    } catch (e) { /* position went stale mid-layout */ }
+
+    const card = document.createElement("div")
+    card.className = "ashokan-comment-card"
+    const author = document.createElement("div")
+    author.className = "ashokan-comment-card-author"
+    author.textContent = comment.author || "Comment"
+    const text = document.createElement("div")
+    text.textContent = comment.text
+    card.append(author, text)
+    card.addEventListener("mousedown", event => {
+      event.preventDefault()
+      selectRange(comment.from, comment.to)
+    })
+    commentRail.appendChild(card)
+    const top = Math.max(anchorTop, previousBottom + 8)
+    card.style.top = top + "px"
+    previousBottom = top + card.offsetHeight
+  }
+}
+
+window.addEventListener("resize", () => layoutCommentMargin())
+
 function changeAtOrAfter(items, pos, wrap) {
   if (!items.length) return null
   return items.find(c => c.to > pos) || (wrap ? items[0] : null)
@@ -914,7 +966,10 @@ function mount(doc) {
     dispatchTransaction(tr) {
       const newState = view.state.apply(tr)
       view.updateState(newState)
-      if (tr.docChanged) notifyChange(newState)
+      if (tr.docChanged) {
+        notifyChange(newState)
+        layoutCommentMargin()
+      }
     },
   })
 }
@@ -961,6 +1016,7 @@ window.Ashokan = {
     } finally {
       loading = false
     }
+    layoutCommentMargin()
     if (view) {
       post("stats", {
         words: wordCount(view.state.doc),
@@ -1211,6 +1267,8 @@ window.Ashokan = {
     }
     return { applied, failed }
   },
+
+  setCommentsMargin(on) { setCommentsMargin(on) },
 
   nextComment() {
     if (!view) return

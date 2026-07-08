@@ -172,8 +172,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let addComment = reviewMenu.addItem(withTitle: "Add Comment…",
                                             action: Selector(("reviewAddComment:")), keyEquivalent: "m")
         addComment.keyEquivalentModifierMask = [.command, .option]
-        reviewMenu.addItem(withTitle: "Show Comment",
-                           action: Selector(("reviewShowComment:")), keyEquivalent: "")
+        reviewMenu.addItem(withTitle: "Show Comments in Margin",
+                           action: Selector(("toggleCommentsMargin:")), keyEquivalent: "")
         reviewMenu.addItem(withTitle: "Remove Comment",
                            action: Selector(("reviewRemoveComment:")), keyEquivalent: "")
         reviewMenu.addItem(withTitle: "Previous Comment",
