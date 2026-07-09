@@ -1,0 +1,54 @@
+# Changelog
+
+## 0.8.1 — July 9, 2026
+- **Start Here tour**: a live tutorial document with pre-seeded suggestions,
+  a comment, and a task checklist; opens as an editable untitled from
+  onboarding, the Welcome window's Start Here button, or Help.
+- Demo GIF in the README, recorded against the real app.
+
+## 0.8.0 — "the research release," July 8, 2026
+Tranche 1 of the [45-agent market study](docs/MARKET-RESEARCH.html):
+- Bulk review operations: Accept/Reject All scoped to everything, the
+  selection, or a single author (humans vs. AI reviewers).
+- Preview modes: Markup / Final / Original — view-only, with a safety banner
+  and read-only enforcement; the file always keeps its markup.
+- External-change detection: agent rewrites the open file → clean documents
+  reload automatically; dirty documents get a Reload-or-Keep conflict alert.
+- Data-loss guards: WebKit process-death recovery; suspicious empty-body
+  updates rejected.
+- Export-time review check (with Accept All & Export); PDF title/author metadata.
+- Clickable GFM task lists round-tripping to `- [x]`; dark-mode default theme.
+- Adversarial round-trip corpus: 38 fidelity checks across five phases.
+
+## 0.7.x — July 8, 2026
+- Review bar summonable anytime (toolbar checklist button, ⇧⌘R).
+- Onboarding tour; bundled help + AGENTS.md agent guide; Help menu.
+- Margin comment cards with Edit/Remove; comment popover sizing fix.
+- QA sweep by four computer-using agents (29 scenarios): fixed a
+  source-pane crash, style-popup cursor tracking, silent predictive-text
+  rewrites, invisible image alignment, cross-format save mislabeling,
+  Markdown PDF-export filename.
+- Versioning from git (`VERSION` file + commit count).
+
+## 0.5–0.6 — July 7–8, 2026
+- **AI Review with a local Ollama model**: quote-anchored suggestions applied
+  as tracked changes, model named as author; nothing leaves the machine.
+- Agent instructions: invisible embedded protocol teaching Claude Code/Codex
+  to propose edits as tracked changes.
+- Click-to-read comment popovers; comments margin (Show All).
+- HTML comments in the body preserved through the round-trip.
+- Hover ✓/✕ chips on tracked changes. App icon (Angle-Bracket Mountains).
+
+## 0.2–0.4 — July 7, 2026
+- **Review mode**: tracked changes as standard `ins`/`del`, comments as
+  `mark`+`title` — redlines readable in any browser.
+- Images (data-URI embed, drag/paste, resize, alignment), full table editing,
+  print-quality PDF export, Markdown open/edit/save, Welcome launcher with
+  workspace folders and live thumbnails, two-tier toolbar, status bar,
+  native tabs.
+
+## 0.1 — July 7, 2026
+- Initial release: native AppKit shell, WKWebView + ProseMirror editing core,
+  toggleable source pane, and the founding rule — the lossless round-trip.
+  Everything outside `<body>` byte-for-byte; unknown markup preserved as
+  protected islands.
