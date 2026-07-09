@@ -131,7 +131,10 @@ final class WelcomeWindowController: NSWindowController, NSCollectionViewDataSou
         let openButton = NSButton(title: "Open…", target: nil,
                                   action: #selector(NSDocumentController.openDocument(_:)))
         openButton.bezelStyle = .rounded
-        let buttons = NSStackView(views: [newButton, openButton])
+        let tourButton = NSButton(title: "Start Here", target: nil,
+                                  action: Selector(("openTourDocument:")))
+        tourButton.bezelStyle = .rounded
+        let buttons = NSStackView(views: [newButton, openButton, tourButton])
         buttons.orientation = .horizontal
         buttons.spacing = 10
 

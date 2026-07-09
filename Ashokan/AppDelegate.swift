@@ -39,6 +39,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WelcomeWindowController.shared.show()
     }
 
+    /// Opens the Start Here tour as a fresh, editable untitled document —
+    /// no lock, no fixed location, entirely the user's.
+    @objc func openTourDocument(_ sender: Any?) {
+        Self.openStartHereTour()
+    }
+
+    static func openStartHereTour() {
+        guard let url = Bundle.main.url(forResource: "start-here", withExtension: "html"),
+              let html = try? String(contentsOf: url, encoding: .utf8),
+              let document = try? NSDocumentController.shared.openUntitledDocumentAndDisplay(true) as? Document
+        else { return }
+        document.model = HTMLDocumentModel.parse(html)
+        (document.windowControllers.first as? DocumentWindowController)?.documentDidReload()
+    }
+
     // MARK: - Menu construction
 
     private func buildMainMenu() -> NSMenu {
@@ -246,10 +261,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                          action: #selector(openBundledDoc(_:)), keyEquivalent: "")
             .representedObject = "roadmap.html"
         helpMenu.addItem(.separator())
+        helpMenu.addItem(withTitle: "Open Tour Document",
+                         action: #selector(openTourDocument(_:)), keyEquivalent: "")
         helpMenu.addItem(withTitle: "Show Onboarding Tour",
                          action: #selector(showOnboarding(_:)), keyEquivalent: "")
         for item in helpMenu.items where item.action == #selector(openBundledDoc(_:))
-            || item.action == #selector(showOnboarding(_:)) {
+            || item.action == #selector(showOnboarding(_:))
+            || item.action == #selector(openTourDocument(_:)) {
             item.target = self
         }
         mainMenu.addItem(submenu: helpMenu, title: "Help")

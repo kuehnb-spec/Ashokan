@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Start Here — Welcome to Ashokan</title>
+<style>
+  body { font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         color: #1c1e21; max-width: 44em; margin: 0 auto; padding: 48px 56px 120px; }
+  h1 { font-size: 2em; letter-spacing: -0.02em; border-bottom: 2px solid #2a6f4e; padding-bottom: 0.3em; }
+  h2 { font-size: 1.3em; margin-top: 1.7em; color: #2a6f4e; }
+  .meta { color: #667085; font-size: 0.92em; }
+  blockquote { border-left: 3px solid #2a6f4e; margin: 1em 0; padding: 0.2em 1.2em; color: #475467; }
+  code { font: 0.88em ui-monospace, "SF Mono", Menlo, monospace; background: #f4f5f7;
+         border-radius: 4px; padding: 0.1em 0.4em; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1e22; color: #e6e8ed; }
+    .meta { color: #a7b0be; }
+    blockquote { border-left-color: #3fa876; color: #a7b0be; }
+    code { background: #2a2f37; }
+    h2 { color: #52b788; }
+  }
+</style>
+</head>
+<body>
+<h1>Start Here</h1>
+<p class="meta">This is a live document — everything below is editable, and this file is yours (save it anywhere). Two minutes here shows you what Ashokan does.</p>
+
+<h2>1. This paragraph has suggestions waiting</h2>
+<p>Ashokan is a word processor for <del data-ashokan-author="The Tour">web pages</del><ins data-ashokan-author="The Tour">HTML and Markdown documents</ins> — the files AI agents write all day. <strong>Hover over the red or green text</strong> and a little ✓ / ✕ chip appears: accept or reject each suggestion with one click. Tracked changes here are <del data-ashokan-author="The Tour">proprietary magic</del><ins data-ashokan-author="The Tour">standard HTML that renders as redlines in any browser</ins>.</p>
+<blockquote><p>The review bar above has the bulk controls: Accept All ▾, Reject All ▾ (by author, even), and a Preview switch that shows the document as if everything were accepted — or rejected.</p></blockquote>
+
+<h2>2. This sentence has a comment</h2>
+<p>Some feedback doesn't want to change the text — it wants to <mark title="Like this! Click the yellow highlight to read, edit, or remove a comment. Select any text and press ⌥⌘M to add your own." data-ashokan-author="The Tour">say something about it</mark>. Click the yellow highlight.</p>
+
+<h2>3. Make your own suggestions</h2>
+<p>Click <strong>Suggest</strong> in the top-right of the format bar, then type anywhere — your edits become green tracked insertions with your name on them, and deletions turn red instead of disappearing. Toggle Suggest off to edit normally.</p>
+
+<h2>4. Try these</h2>
+<ul>
+<li><input type="checkbox"> Press <code>⌘/</code> — the source pane opens and you can watch the clean markup live</li>
+<li><input type="checkbox"> Type <code>#</code> then a space on an empty line — instant heading (Markdown shortcuts work everywhere)</li>
+<li><input type="checkbox"> Drag an image from Finder into this document — it embeds right into the file</li>
+<li><input type="checkbox"> Press <code>⌥⌘P</code> — export a print-quality PDF</li>
+<li><input type="checkbox"> These checkboxes are real — click one</li>
+</ul>
+
+<h2>5. The part nobody else does</h2>
+<p>Ashokan never rewrites what you didn't edit. Styles, scripts, and markup it doesn't understand survive byte-for-byte — so the documents your AI agents produce stay <em>theirs</em>, and the edits stay <em>yours</em>. If you run <a href="https://ollama.com">Ollama</a>, try <strong>Review → AI Review with Local Model</strong>: a model on your own machine redlines this document, and you judge its work with the same chips you just used. And <strong>Review → Add Agent Instructions</strong> embeds an invisible note that teaches Claude Code or Codex to send you redlines instead of rewrites.</p>
+
+<blockquote><p>That's the tour. Delete all this and write something — or keep it around; Help → Open Tour Document brings it back anytime.</p></blockquote>
+</body>
+</html>

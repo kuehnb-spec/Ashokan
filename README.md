@@ -6,7 +6,7 @@ Mac — built for the age of AI agents that write documents all day.
 Named for the [Ashokan Reservoir](https://en.wikipedia.org/wiki/Ashokan_Reservoir)
 in the Catskills.
 
-![Review mode: tracked changes with hover accept/reject](docs/images/review-mode.png)
+![Live demo: hover-accepting suggestions, tracked typing, preview modes, and the source pane](docs/images/demo.gif)
 
 ## Install
 

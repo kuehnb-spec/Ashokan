@@ -175,7 +175,7 @@ final class OnboardingWindowController: NSWindowController {
         if step.showsAddFolder { updateFolderCount() }
         stepLabel.stringValue = "\(index + 1) of \(steps.count)"
         backButton.isHidden = index == 0
-        nextButton.title = index == steps.count - 1 ? "Get Started" : "Continue"
+        nextButton.title = index == steps.count - 1 ? "Open the Tour Document" : "Continue"
     }
 
     private func updateFolderCount() {
@@ -216,7 +216,9 @@ final class OnboardingWindowController: NSWindowController {
         } else {
             UserDefaults.standard.set(true, forKey: Self.onboardedKey)
             close()
-            WelcomeWindowController.shared.show()
+            // Land the new user in a live document with suggestions to play
+            // with, not an empty launcher.
+            AppDelegate.openStartHereTour()
         }
     }
 }
