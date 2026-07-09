@@ -25,14 +25,14 @@
 {
   "project": "Ashokan",
   "tagline": "A simple, fast, native WYSIWYG editor for HTML documents on the Mac.",
-  "status": "active",
+  "status": "shipped",
   "updated": "2026-07-07",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
   "summary": "v0.5: the AI-collaboration release. (1) AI Review with local Ollama (Review menu, ⌥⌘R): model list from localhost:11434, suggestions returned as exact-quote JSON and applied as tracked changes with the model as author — pipeline verified live against qwen3:8b (15s, clean JSON, caught every planted error). (2) Add Agent Instructions…: embeds an invisible HTML-comment protocol block teaching Claude Code/Codex to propose edits as ins/del/mark. (3) Comments UX fixed: click a highlight → popover with text/author/Edit/Remove (hover tooltips were undiscoverable — Brant couldn't find them). (4) Fidelity fix: HTML comments in body now survive round-trip as invisible islands (they were being dropped). Harness 29/29 across four phases. App themes idea: skipped per Brant (macOS chrome constraints). Prior: review mode, workspace, Markdown, images/tables, PDF export, launcher, icon (Angle-Bracket Mountains).",
   "next": [
     { "text": "Tonight's final build: Brant's office feedback + Tranche 1 from docs/MARKET-RESEARCH.html (autosave hardening + round-trip corpus, bulk accept/reject + preview modes, external-change detection, export-time review check, ashokan CLI).", "priority": "high" },
-    { "text": "1.0 ship: Developer ID signing + notarization, Release build, public GitHub repo, website (use Angle-Bracket Mountains art for the header).", "priority": "high" },
+    { "text": "SHIPPED July 8: public repo + brantkuehn.com/projects/ashokan.html live. Remaining for 1.0: Brant's Apple Developer ID, then notarized Release build.", "priority": "high" },
     { "text": "Tranche 2 (next month): MCP server with tracked-changes writes, Mermaid+KaTeX, smart paste, pane scroll-sync, perf benchmark; SEO/comparison pages. See docs/MARKET-RESEARCH.html §7.", "priority": "med" },
     { "text": "Document view presets (CSS presets for unstyled docs + 'bake into document'), the reframed skins idea.", "priority": "med" },
     { "text": "Plugin protocol: extract from the Ollama integration; Claude Code CLI ('claude -p') as second consumer.", "priority": "med" },
