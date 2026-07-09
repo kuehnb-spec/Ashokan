@@ -38,5 +38,6 @@ if pgrep -qf "$DEST/Contents/MacOS/Ashokan"; then
   sleep 2
 fi
 mkdir -p "$(dirname "$DEST")"
+rm -rf "$DEST"   # ditto merges into existing bundles, breaking code signatures
 ditto build/Build/Products/Debug/Ashokan.app "$DEST"
 echo "Installed: $DEST"

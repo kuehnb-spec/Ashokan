@@ -64,4 +64,4 @@ spctl --assess --type execute --verbose=2 "$APP" || true
 
 ditto -c -k --keepParent "$APP" "$ZIP"
 echo "== Done: $ZIP (signed, notarized, stapled) =="
-echo "Install locally with: ditto -xk $ZIP /Applications/"
+echo "Install locally with: rm -rf /Applications/Ashokan.app && ditto -xk $ZIP /Applications/"
