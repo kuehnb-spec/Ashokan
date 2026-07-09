@@ -26,18 +26,16 @@
   "project": "Ashokan",
   "tagline": "A simple, fast, native WYSIWYG editor for HTML documents on the Mac.",
   "status": "shipped",
-  "updated": "2026-07-07",
+  "updated": "2026-07-08",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html"],
-  "summary": "v0.5: the AI-collaboration release. (1) AI Review with local Ollama (Review menu, ⌥⌘R): model list from localhost:11434, suggestions returned as exact-quote JSON and applied as tracked changes with the model as author — pipeline verified live against qwen3:8b (15s, clean JSON, caught every planted error). (2) Add Agent Instructions…: embeds an invisible HTML-comment protocol block teaching Claude Code/Codex to propose edits as ins/del/mark. (3) Comments UX fixed: click a highlight → popover with text/author/Edit/Remove (hover tooltips were undiscoverable — Brant couldn't find them). (4) Fidelity fix: HTML comments in body now survive round-trip as invisible islands (they were being dropped). Harness 29/29 across four phases. App themes idea: skipped per Brant (macOS chrome constraints). Prior: review mode, workspace, Markdown, images/tables, PDF export, launcher, icon (Angle-Bracket Mountains).",
+  "summary": "PUBLIC as of July 8: repo open-sourced (github.com/kuehnb-spec/Ashokan, MIT) and the app is live on brantkuehn.com/projects/ashokan.html with download CTA + homepage card. Current build v0.8.0 'the research release' — Tranche 1 of the 45-agent market study shipped: bulk accept/reject (all/selection/by-author), Markup·Final·Original preview modes with safety banner, external-change detection with conflict-safe reload (the two-writers feature), WebKit crash recovery + data-loss guards, export-time review check, PDF metadata, clickable GFM task lists, dark-mode default theme, adversarial round-trip corpus (38/38 checks, five phases). Full history: review mode with tracked changes as standard ins/del, local Ollama AI review, agent-instruction blocks, workspace launcher, Markdown, PDF export, onboarding, bundled help + AGENTS.md.",
   "next": [
-    { "text": "Tonight's final build: Brant's office feedback + Tranche 1 from docs/MARKET-RESEARCH.html (autosave hardening + round-trip corpus, bulk accept/reject + preview modes, external-change detection, export-time review check, ashokan CLI).", "priority": "high" },
-    { "text": "SHIPPED July 8: public repo + brantkuehn.com/projects/ashokan.html live. Remaining for 1.0: Brant's Apple Developer ID, then notarized Release build.", "priority": "high" },
-    { "text": "Tranche 2 (next month): MCP server with tracked-changes writes, Mermaid+KaTeX, smart paste, pane scroll-sync, perf benchmark; SEO/comparison pages. See docs/MARKET-RESEARCH.html §7.", "priority": "med" },
-    { "text": "Document view presets (CSS presets for unstyled docs + 'bake into document'), the reframed skins idea.", "priority": "med" },
-    { "text": "Plugin protocol: extract from the Ollama integration; Claude Code CLI ('claude -p') as second consumer.", "priority": "med" },
-    { "text": "Review v2: comment sidebar + threads, tracked formatting changes, per-author colors.", "priority": "med" },
-    { "text": "Ship prep: Developer ID signing + notarization, Release build, public repo.", "priority": "med" }
+    { "text": "Brant: enroll in Apple Developer ($99/yr) → Claude notarizes a Release build; kills the Gatekeeper 'damaged' warning for public downloaders. The only 1.0 blocker.", "priority": "high" },
+    { "text": "Brant: run claude /login in a Studio terminal so the standing remote-control host stops 401ing (still pending from July 8 morning).", "priority": "med" },
+    { "text": "Tranche 2 (see docs/MARKET-RESEARCH.html §7): MCP server with tracked-changes-by-default writes, Mermaid+KaTeX, smart paste, ashokan CLI, pane scroll-sync, performance benchmark; SEO comparison pages.", "priority": "med" },
+    { "text": "Announce once notarized: Show HN + X post; the market study's positioning lines are ready ('the canvas experience without the betrayals').", "priority": "med" },
+    { "text": "Tranche 3: compare/diff engine, comment threads, DOCX bridge, document view presets, plugin protocol.", "priority": "med" }
   ],
   "open_questions": [
     "Distribution: direct download with Developer ID signing, or personal use only for now?",
@@ -51,10 +49,12 @@
     { "date": "2026-07-07", "text": "Tracked changes will use standard HTML ins/del elements and comments will use mark + title + a JSON island — review data stays readable in any browser, no sidecar files." }
   ],
   "links": [
-    { "label": "README", "href": "README.md" },
+    { "label": "Public repo", "href": "https://github.com/kuehnb-spec/Ashokan" },
+    { "label": "Website page", "href": "https://brantkuehn.com/projects/ashokan.html" },
+    { "label": "Market research omnibus", "href": "docs/MARKET-RESEARCH.html" },
     { "label": "Roadmap & feature design", "href": "docs/ROADMAP.html" },
-    { "label": "Demo memo (test doc)", "href": "samples/demo-memo.html" },
-    { "label": "Editing core", "href": "editor/src/editor.js" }
+    { "label": "QA plan / report", "href": "docs/QA-REPORT.md" },
+    { "label": "Demo memo (test doc)", "href": "samples/demo-memo.html" }
   ]
 }
 </script>
