@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 — July 9, 2026
+- **Signed and notarized.** Releases are now built in Release configuration,
+  signed with a Developer ID (hardened runtime), notarized by Apple, and
+  stapled — downloads open with no Gatekeeper warnings. The full pipeline is
+  `scripts/release.sh`.
+
 ## 0.8.1 — July 9, 2026
 - **Start Here tour**: a live tutorial document with pre-seeded suggestions,
   a comment, and a task checklist; opens as an editable untitled from

@@ -12,11 +12,7 @@ in the Catskills.
 
 Download the latest zip from [Releases](https://github.com/kuehnb-spec/Ashokan/releases),
 unzip, and drag Ashokan.app to /Applications. Requires macOS 14+ on Apple Silicon.
-
-> **Gatekeeper note:** builds aren't notarized yet, so a browser-downloaded
-> copy may claim the app is "damaged." Either download without quarantine
-> (`gh release download` / `curl -L`) or clear it once:
-> `xattr -dr com.apple.quarantine /Applications/Ashokan.app`
+Builds are Developer ID–signed and notarized by Apple — no Gatekeeper warnings.
 
 ## Why
 
