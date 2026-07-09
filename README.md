@@ -1,9 +1,22 @@
 # Ashokan
 
-A simple, fast, native WYSIWYG editor for HTML documents on the Mac.
+A simple, fast, native WYSIWYG editor for HTML and Markdown documents on the
+Mac — built for the age of AI agents that write documents all day.
 
 Named for the [Ashokan Reservoir](https://en.wikipedia.org/wiki/Ashokan_Reservoir)
 in the Catskills.
+
+![Review mode: tracked changes with hover accept/reject](docs/images/review-mode.png)
+
+## Install
+
+Download the latest zip from [Releases](https://github.com/kuehnb-spec/Ashokan/releases),
+unzip, and drag Ashokan.app to /Applications. Requires macOS 14+ on Apple Silicon.
+
+> **Gatekeeper note:** builds aren't notarized yet, so a browser-downloaded
+> copy may claim the app is "damaged." Either download without quarantine
+> (`gh release download` / `curl -L`) or clear it once:
+> `xattr -dr com.apple.quarantine /Applications/Ashokan.app`
 
 ## Why
 
@@ -62,6 +75,9 @@ swift scripts/roundtrip-test.swift   # headless fidelity checks on the real edit
 ```
 
 ## Features
+
+![Welcome launcher with workspace folders](docs/images/welcome-workspace.png)
+![Comments in the margin](docs/images/comment-margin.png)
 
 - **AI review, fully local** — Review → AI Review with Local Model sends the
   document text to your own Ollama server (nothing leaves the Mac); the
