@@ -17847,24 +17847,36 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     });
     return changes;
   }
+  var commentIdCounter = 0;
+  function newCommentId() {
+    return "c" + Date.now().toString(36) + (commentIdCounter++).toString(36);
+  }
   function collectComments(doc3) {
     const comments = [];
+    const byId = /* @__PURE__ */ new Map();
     doc3.descendants((node, pos) => {
       if (!node.isInline) return;
       const mark = schema.marks.comment.isInSet(node.marks);
       if (!mark) return;
-      const last = comments[comments.length - 1];
-      if (last && last.to === pos && last.text === ((mark.attrs.attrs || {}).title || "")) {
-        last.to = pos + node.nodeSize;
-      } else {
-        const bag = mark.attrs.attrs || {};
-        comments.push({
-          from: pos,
-          to: pos + node.nodeSize,
-          text: bag.title || "",
-          author: bag["data-ashokan-author"] || ""
-        });
+      const bag = mark.attrs.attrs || {};
+      const entry = {
+        from: pos,
+        to: pos + node.nodeSize,
+        text: bag.title || "",
+        author: bag["data-ashokan-author"] || "",
+        id: bag["data-ashokan-comment-id"] || null
+      };
+      if (entry.id && byId.has(entry.id)) {
+        byId.get(entry.id).to = entry.to;
+        return;
       }
+      const last = comments[comments.length - 1];
+      if (last && !entry.id && !last.id && pos - last.to <= 2 && last.text === entry.text && last.author === entry.author) {
+        last.to = entry.to;
+        return;
+      }
+      comments.push(entry);
+      if (entry.id) byId.set(entry.id, entry);
     });
     return comments;
   }
@@ -18440,7 +18452,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       if (!view || !text) return;
       const { from: from2, to, empty: empty2 } = view.state.selection;
       if (empty2) return;
-      const bag = { ...suggestionBag(), title: text };
+      const bag = { ...suggestionBag(), title: text, "data-ashokan-comment-id": newCommentId() };
       const tr = view.state.tr;
       tr.setMeta(SUGGEST_META, true);
       tr.addMark(from2, to, schema.marks.comment.create({ attrs: bag }));
@@ -18517,7 +18529,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
           tr.addMark(
             range.from,
             range.to,
-            schema.marks.comment.create({ attrs: { ...bag, title: edit.comment } })
+            schema.marks.comment.create({
+              attrs: { ...bag, title: edit.comment, "data-ashokan-comment-id": newCommentId() }
+            })
           );
         }
         if (tr.steps.length) {

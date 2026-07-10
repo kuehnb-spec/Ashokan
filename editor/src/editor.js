@@ -790,24 +790,43 @@ function collectChanges(doc) {
   return changes
 }
 
+let commentIdCounter = 0
+function newCommentId() {
+  return "c" + Date.now().toString(36) + (commentIdCounter++).toString(36)
+}
+
 function collectComments(doc) {
   const comments = []
+  const byId = new Map()
   doc.descendants((node, pos) => {
     if (!node.isInline) return
     const mark = schema.marks.comment.isInSet(node.marks)
     if (!mark) return
-    const last = comments[comments.length - 1]
-    if (last && last.to === pos && last.text === ((mark.attrs.attrs || {}).title || "")) {
-      last.to = pos + node.nodeSize
-    } else {
-      const bag = mark.attrs.attrs || {}
-      comments.push({
-        from: pos,
-        to: pos + node.nodeSize,
-        text: bag.title || "",
-        author: bag["data-ashokan-author"] || "",
-      })
+    const bag = mark.attrs.attrs || {}
+    const entry = {
+      from: pos,
+      to: pos + node.nodeSize,
+      text: bag.title || "",
+      author: bag["data-ashokan-author"] || "",
+      id: bag["data-ashokan-comment-id"] || null,
     }
+    // Same comment continuing (possibly across a block boundary): extend it.
+    if (entry.id && byId.has(entry.id)) {
+      byId.get(entry.id).to = entry.to
+      return
+    }
+    const last = comments[comments.length - 1]
+    // Legacy comments (no id): merge runs that are adjacent OR separated
+    // only by a block boundary (position gap ≤ 2) — one comment spanning
+    // two paragraphs used to produce two margin cards.
+    if (last && !entry.id && !last.id
+        && pos - last.to <= 2
+        && last.text === entry.text && last.author === entry.author) {
+      last.to = entry.to
+      return
+    }
+    comments.push(entry)
+    if (entry.id) byId.set(entry.id, entry)
   })
   return comments
 }
@@ -1395,7 +1414,7 @@ window.Ashokan = {
     if (!view || !text) return
     const { from, to, empty } = view.state.selection
     if (empty) return
-    const bag = { ...suggestionBag(), title: text }
+    const bag = { ...suggestionBag(), title: text, "data-ashokan-comment-id": newCommentId() }
     const tr = view.state.tr
     tr.setMeta(SUGGEST_META, true)
     tr.addMark(from, to, schema.marks.comment.create({ attrs: bag }))
@@ -1473,7 +1492,9 @@ window.Ashokan = {
       }
       if (edit.comment) {
         tr.addMark(range.from, range.to,
-                   schema.marks.comment.create({ attrs: { ...bag, title: edit.comment } }))
+                   schema.marks.comment.create({
+                     attrs: { ...bag, title: edit.comment, "data-ashokan-comment-id": newCommentId() },
+                   }))
       }
       if (tr.steps.length) {
         view.dispatch(tr)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1 — July 9, 2026
+- **Fix:** a comment spanning a paragraph boundary produced duplicate margin
+  cards (one per paragraph). Comments now carry a stable id in their markup
+  and the margin merges by it; existing id-less comments are healed by a
+  block-boundary-aware merge. (Reported by Brant from daily use.)
+
 ## 0.9.0 — July 9, 2026
 - **Signed and notarized.** Releases are now built in Release configuration,
   signed with a Developer ID (hardened runtime), notarized by Apple, and
