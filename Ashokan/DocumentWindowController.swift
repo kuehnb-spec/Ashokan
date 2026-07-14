@@ -127,6 +127,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
                 self.doc.model.bodyHTML = bodyHTML
             }
             self.doc.updateChangeCount(.changeDone)
+            self.doc.bumpRevision()
             self.lastWordCount = words
             self.updateStatusBar()
             if !self.sourceItem.isCollapsed && !self.sourceVC.isEditing {

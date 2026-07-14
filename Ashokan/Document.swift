@@ -11,6 +11,13 @@ final class Document: NSDocument {
     /// Authoritative source text for Markdown documents.
     var markdown = ""
 
+    /// MCP: stable id and optimistic-concurrency revision. The revision
+    /// bump is one integer increment on the existing change path — the
+    /// only cost the MCP feature adds to normal editing.
+    let mcpId = String(UUID().uuidString.prefix(8)).lowercased()
+    private(set) var revision = 1
+    func bumpRevision() { revision += 1 }
+
     private static func isMarkdown(typeName: String, url: URL?) -> Bool {
         if typeName.lowercased().contains("markdown") { return true }
         let ext = url?.pathExtension.lowercased()

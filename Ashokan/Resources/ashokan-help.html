@@ -73,6 +73,9 @@
 <p>Review &gt; <strong>Add Agent Instructions…</strong> embeds an invisible instruction block (an HTML comment) that teaches any AI agent the tracked-changes protocol. Then tell your agent: <em>"Review ~/path/to/file.html and follow its embedded instructions."</em> Its edits arrive as redlines in Ashokan.</p>
 <div class="tip"><p>Agents can also read the machine-oriented guide bundled with the app: Help &gt; <strong>Agent Guide</strong>, or point them at <code>/Applications/Ashokan.app/Contents/Resources/AGENTS.md</code>.</p></div>
 
+<h3>Direct connection (MCP)</h3>
+<p>Review &gt; <strong>Allow Agents to Connect (MCP Server)</strong> lets agents talk to Ashokan directly: they can list and read your open documents and propose edits — which always arrive as tracked changes under the agent's name, never silent rewrites. Then Review &gt; <strong>Copy Agent Setup Command</strong> and paste it in a terminal to connect Claude Code. Off by default; when off, nothing runs. When on, it listens only on this Mac (127.0.0.1, token-protected), and normal editing is unaffected.</p>
+
 <h2>Troubleshooting</h2>
 <ul>
 <li><strong>A widget or styled block won't edit:</strong> it's a protected island (markup Ashokan doesn't model). Edit it in the source pane (⌘/).</li>

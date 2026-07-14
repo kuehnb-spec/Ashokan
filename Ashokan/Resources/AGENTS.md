@@ -39,6 +39,32 @@ Documents may contain an HTML comment beginning `<!-- ashokan-agent-instructions
 It carries a task for you plus this same protocol. If present, follow its TASK
 line. Users add it via Review > Add Agent Instructions…
 
+## Connecting over MCP (the best way to work with Ashokan)
+
+If the user has enabled Review > "Allow Agents to Connect (MCP Server)",
+Ashokan serves MCP over HTTP at `http://127.0.0.1:<port>/mcp` (default 8722,
+bearer-token auth; the user gets the exact setup command from Review > Copy
+Agent Setup Command — for Claude Code it is `claude mcp add --transport http
+ashokan …`).
+
+Five tools:
+
+- `list_documents` — open documents with ids and revision tokens.
+- `read_document {documentId}` — source (HTML body or Markdown), visible
+  text (`docText`), and the current `revision`.
+- `propose_edits {documentId, revision, author, edits[]}` — each edit is
+  `{quote, replacement?, comment?}` where `quote` is an exact substring of
+  `docText`. Edits land as TRACKED CHANGES with your author name; the human
+  accepts or rejects. A stale `revision` applies nothing and returns the
+  current one — re-read, then retry.
+- `get_review_state {documentId}` — pending changes and comments with
+  authors and anchor text.
+- `open_document {path}` — open an .html/.md file in the editor (e.g. to
+  show the user something you just wrote).
+
+There is deliberately no accept/reject tool: adjudication belongs to the
+human. Keep quotes short (10–150 chars) and unique within their paragraph.
+
 ## Operating the app itself
 
 - Launch / open a file: `open -a Ashokan /path/to/file.html` (also `.md`).

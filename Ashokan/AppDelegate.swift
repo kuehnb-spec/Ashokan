@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // No-op unless the user has turned the agent server on.
+        MCPServer.startIfEnabled()
         (NSDocumentController.shared as? AshokanDocumentController)?.restorePersistedRecents()
         // On a plain launch (no file to open), show the Welcome launcher.
         // The small delay lets file-open events delivered around launch win.
@@ -205,6 +207,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         aiReview.keyEquivalentModifierMask = [.command, .option]
         reviewMenu.addItem(withTitle: "Add Agent Instructions…",
                            action: Selector(("addAgentInstructions:")), keyEquivalent: "")
+        reviewMenu.addItem(.separator())
+        let mcpToggle = reviewMenu.addItem(withTitle: "Allow Agents to Connect (MCP Server)",
+                                           action: #selector(toggleMCPServer(_:)), keyEquivalent: "")
+        mcpToggle.target = self
+        let mcpCopy = reviewMenu.addItem(withTitle: "Copy Agent Setup Command",
+                                         action: #selector(copyMCPSetupCommand(_:)), keyEquivalent: "")
+        mcpCopy.target = self
         mainMenu.addItem(submenu: reviewMenu, title: "Review")
 
         // View
@@ -288,6 +297,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func showOnboarding(_ sender: Any?) {
         OnboardingWindowController.shared.show()
+    }
+
+    // MARK: - MCP server (off by default; zero cost when off)
+
+    @objc func toggleMCPServer(_ sender: Any?) {
+        let enabling = !MCPServer.isEnabled
+        MCPServer.setEnabled(enabling)
+        if enabling {
+            let alert = NSAlert()
+            alert.messageText = "Agents Can Now Connect"
+            alert.informativeText = "Ashokan is listening on 127.0.0.1:\(MCPServer.port) (this Mac only, token-protected). Agent edits arrive as tracked changes for you to accept or reject.\n\nUse Review > Copy Agent Setup Command and paste it in a terminal to connect Claude Code."
+            alert.runModal()
+        }
+    }
+
+    @objc func copyMCPSetupCommand(_ sender: Any?) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(MCPServer.setupCommand, forType: .string)
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(toggleMCPServer(_:)) {
+            menuItem.state = MCPServer.isEnabled ? .on : .off
+        }
+        if menuItem.action == #selector(copyMCPSetupCommand(_:)) {
+            return MCPServer.isEnabled
+        }
+        return true
     }
 
     private func addStyleItem(_ menu: NSMenu, _ title: String, _ selector: String, _ key: String) {

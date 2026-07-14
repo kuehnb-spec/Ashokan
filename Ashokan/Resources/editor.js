@@ -18496,6 +18496,25 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     getDocText() {
       return view ? view.state.doc.textBetween(0, view.state.doc.content.size, "\n", " ") : "";
     },
+    // Structured review state for agents (MCP): pending changes and comments
+    // with their anchor text.
+    getReviewState() {
+      if (!view) return { changes: [], comments: [] };
+      const doc3 = view.state.doc;
+      const quote = (from2, to) => doc3.textBetween(from2, to, " ", " ");
+      return {
+        changes: collectChanges(doc3).map((c) => ({
+          type: c.type,
+          author: c.author,
+          text: quote(c.from, c.to)
+        })),
+        comments: collectComments(doc3).map((c) => ({
+          text: c.text,
+          author: c.author,
+          anchor: quote(c.from, c.to)
+        }))
+      };
+    },
     // edits: [{quote, replacement?, comment?}]; author labels the suggestions.
     applyAgentEdits(edits, author) {
       if (!view) return { applied: 0, failed: [] };

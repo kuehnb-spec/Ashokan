@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — July 13, 2026
+- **MCP server** (Review > Allow Agents to Connect): any MCP-speaking agent —
+  Claude Code, Codex, others — can list, read, and open Ashokan documents
+  and propose edits that land as tracked changes under the agent's name.
+  Optimistic-concurrency revision tokens make stale writes impossible;
+  there is deliberately no accept/reject tool (humans adjudicate).
+  Off by default; zero overhead when off; 127.0.0.1-only with bearer-token
+  auth; one-paste setup via Review > Copy Agent Setup Command.
+
 ## 0.9.1 — July 9, 2026
 - **Fix:** a comment spanning a paragraph boundary produced duplicate margin
   cards (one per paragraph). Comments now carry a stable id in their markup
