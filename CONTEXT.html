@@ -26,10 +26,10 @@
   "project": "Ashokan",
   "tagline": "A simple, fast, native WYSIWYG editor for HTML documents on the Mac.",
   "status": "shipped",
-  "updated": "2026-07-13",
+  "updated": "2026-07-15",
   "private": false,
   "tags": ["macos", "swift", "appkit", "prosemirror", "editor", "html", "mcp"],
-  "summary": "v0.10.0 (July 13): MCP SERVER shipped — Review > Allow Agents to Connect starts a streamable-HTTP MCP server (127.0.0.1 only, explicit loopback bind, bearer token, off by default with zero cost when off). Five tools: list_documents / read_document / propose_edits / get_review_state / open_document; agent edits always land as tracked changes under the agent's name; revision tokens refuse stale writes; no accept/reject tool by design. Verified end-to-end with curl and Claude Code's MCP client ('✔ Connected'). Earlier: v0.9.x notarized+stapled releases via scripts/release.sh, duplicate-margin-card fix, first-person website copy rewrite; v0.8.x Tranche 1 of the 45-agent market study (bulk review ops, preview modes, external-change detection, data-loss guards, task lists, adversarial corpus 38/38), Start Here tour, demo GIF. Public: github.com/kuehnb-spec/Ashokan (MIT) + brantkuehn.com/projects/ashokan.html.",
+  "summary": "v0.10.1 (July 15): Print — ⌘P, File menu, toolbar button; same pagination as PDF export and the same pending-review guard (Brant caught the ten-versions-without-Print gap). Decision: NO Lite/Full split — one app, features must be zero-cost when off; heavy assets lazy-load; experimental work goes to GitHub pre-releases. v0.10.0 (July 13): MCP SERVER shipped — Review > Allow Agents to Connect starts a streamable-HTTP MCP server (127.0.0.1 only, explicit loopback bind, bearer token, off by default with zero cost when off). Five tools: list_documents / read_document / propose_edits / get_review_state / open_document; agent edits always land as tracked changes under the agent's name; revision tokens refuse stale writes; no accept/reject tool by design. Verified end-to-end with curl and Claude Code's MCP client ('✔ Connected'). Earlier: v0.9.x notarized+stapled releases via scripts/release.sh, duplicate-margin-card fix, first-person website copy rewrite; v0.8.x Tranche 1 of the 45-agent market study (bulk review ops, preview modes, external-change detection, data-loss guards, task lists, adversarial corpus 38/38), Start Here tour, demo GIF. Public: github.com/kuehnb-spec/Ashokan (MIT) + brantkuehn.com/projects/ashokan.html.",
   "next": [
     { "text": "Brant: run claude /login in a Studio terminal so the standing remote-control host stops 401ing — also unblocks the full claude -p MCP round-trip test (handshake already verified).", "priority": "high" },
     { "text": "Announce: Show HN + X post; positioning lines ready ('the canvas experience without the betrayals'). MCP server is a strong hook.", "priority": "med" },
@@ -47,7 +47,8 @@
     { "date": "2026-07-07", "text": "Core product promise: lossless round-trip. Never rewrite what the user didn't edit; unknown markup survives as protected islands." },
     { "date": "2026-07-07", "text": "Untitled windows opt out of macOS state restoration until saved — template-bearing untitled docs were being preserved as drafts and resurrected on every launch." },
     { "date": "2026-07-07", "text": "Tracked changes will use standard HTML ins/del elements and comments will use mark + title + a JSON island — review data stays readable in any browser, no sidecar files." },
-    { "date": "2026-07-13", "text": "MCP server is opt-in and zero-cost when off (Brant's constraint: never slow down the simple, light editor). No accept/reject tools for agents — adjudication belongs to the human. Revision tokens (optimistic concurrency) instead of locks." }
+    { "date": "2026-07-13", "text": "MCP server is opt-in and zero-cost when off (Brant's constraint: never slow down the simple, light editor). No accept/reject tools for agents — adjudication belongs to the human. Revision tokens (optimistic concurrency) instead of locks." },
+    { "date": "2026-07-15", "text": "No Lite/Full split. One app; every extra must be zero-cost when disabled (the MCP pattern); heavy assets (future Mermaid/KaTeX) lazy-load on first use; experimental builds go out as GitHub pre-releases. Revisit only if a feature is inherently heavy when idle." }
   ],
   "links": [
     { "label": "Public repo", "href": "https://github.com/kuehnb-spec/Ashokan" },
