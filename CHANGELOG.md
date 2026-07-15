@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1 — July 14, 2026
+- **Print** (File > Print…, ⌘P, and a toolbar button) — somehow we shipped
+  ten versions of a document editor without it (thanks, Brant). Uses the
+  same pagination as PDF export (images/tables/code blocks never split,
+  headings stay with their text) and the same pending-review warning.
+
 ## 0.10.0 — July 13, 2026
 - **MCP server** (Review > Allow Agents to Connect): any MCP-speaking agent —
   Claude Code, Codex, others — can list, read, and open Ashokan documents

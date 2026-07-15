@@ -107,6 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let exportPDF = fileMenu.addItem(withTitle: "Export as PDF…",
                                          action: Selector(("exportPDF:")), keyEquivalent: "p")
         exportPDF.keyEquivalentModifierMask = [.command, .option]
+        fileMenu.addItem(withTitle: "Print…",
+                         action: Selector(("ashokanPrint:")), keyEquivalent: "p")
         mainMenu.addItem(submenu: fileMenu, title: "File")
 
         // Edit

@@ -140,6 +140,30 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler, WKNa
         }
     }
 
+    /// Real printing — the same paginated pipeline as PDF export, but with
+    /// the system print panel so the user picks a printer/options.
+    func printDocument(jobTitle: String? = nil) {
+        let printInfo = NSPrintInfo()
+        printInfo.horizontalPagination = .fit
+        printInfo.verticalPagination = .automatic
+        printInfo.topMargin = 54
+        printInfo.bottomMargin = 54
+        printInfo.leftMargin = 54
+        printInfo.rightMargin = 54
+
+        let operation = webView.printOperation(with: printInfo)
+        operation.showsPrintPanel = true
+        operation.showsProgressPanel = true
+        if let jobTitle { operation.jobTitle = jobTitle }
+        // WKWebView's print view starts zero-sized; give it the page rect.
+        operation.view?.frame = NSRect(origin: .zero, size: printInfo.paperSize)
+        if let window = view.window {
+            operation.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
+        } else {
+            operation.run()
+        }
+    }
+
     @objc private func printOperationDidRun(_ operation: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
         if success { stampPDFMetadata() }
         pendingPDFURL = nil

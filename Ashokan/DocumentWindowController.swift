@@ -412,30 +412,45 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         editorVC.call("alignImage", argument: mode)
     }
 
-    // MARK: - PDF export
+    // MARK: - PDF export & printing
 
     @objc func exportPDF(_ sender: Any?) {
+        confirmPendingReview(verb: "Export", output: "PDF") { [weak self] in
+            self?.presentExportPanel()
+        }
+    }
+
+    // Not named printDocument: — WKWebView claims that selector in the
+    // responder chain and its validation disables the menu item.
+    @objc func ashokanPrint(_ sender: Any?) {
+        confirmPendingReview(verb: "Print", output: "printout") { [weak self] in
+            guard let self else { return }
+            self.editorVC.printDocument(jobTitle: (self.doc.displayName as NSString).deletingPathExtension)
+        }
+    }
+
+    /// Never let review markup ship in a PDF or printout unnoticed.
+    private func confirmPendingReview(verb: String, output: String, then proceed: @escaping () -> Void) {
         guard let window else { return }
-        // Export-time review check: never let markup ship in a PDF unnoticed.
         if pendingChanges > 0 || pendingComments > 0 {
             let alert = NSAlert()
             alert.messageText = "Pending Review Items"
             var parts: [String] = []
             if pendingChanges > 0 { parts.append("\(pendingChanges) suggested change\(pendingChanges == 1 ? "" : "s")") }
             if pendingComments > 0 { parts.append("\(pendingComments) comment\(pendingComments == 1 ? "" : "s")") }
-            alert.informativeText = "This document has \(parts.joined(separator: " and ")). The PDF will match the current preview mode (\(currentPreviewMode == "markup" ? "markup visible" : currentPreviewMode))."
-            alert.addButton(withTitle: "Export as Shown")
-            alert.addButton(withTitle: "Accept All & Export")
+            alert.informativeText = "This document has \(parts.joined(separator: " and ")). The \(output) will match the current preview mode (\(currentPreviewMode == "markup" ? "markup visible" : currentPreviewMode))."
+            alert.addButton(withTitle: "\(verb) as Shown")
+            alert.addButton(withTitle: "Accept All & \(verb)")
             alert.addButton(withTitle: "Cancel")
             alert.beginSheetModal(for: window) { [weak self] response in
                 guard let self else { return }
                 switch response {
                 case .alertFirstButtonReturn:
-                    self.presentExportPanel()
+                    proceed()
                 case .alertSecondButtonReturn:
                     self.editorVC.call("acceptAllChanges")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        self.presentExportPanel()
+                        proceed()
                     }
                 default:
                     break
@@ -443,7 +458,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             }
             return
         }
-        presentExportPanel()
+        proceed()
     }
 
     private func presentExportPanel() {
@@ -1039,6 +1054,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
 
     private enum ItemID {
         static let save = NSToolbarItem.Identifier("ashokan.save")
+        static let print = NSToolbarItem.Identifier("ashokan.print")
         static let exportPDF = NSToolbarItem.Identifier("ashokan.exportPDF")
         static let recents = NSToolbarItem.Identifier("ashokan.recents")
         static let review = NSToolbarItem.Identifier("ashokan.review")
@@ -1046,7 +1062,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [ItemID.save, ItemID.exportPDF, ItemID.recents,
+        [ItemID.save, ItemID.print, ItemID.exportPDF, ItemID.recents,
          .flexibleSpace, ItemID.review, ItemID.source]
     }
 
@@ -1065,6 +1081,9 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
                               action: #selector(NSDocument.save(_:)))
             item.target = nil   // responder chain → the document
             return item
+        case ItemID.print:
+            return button(identifier, symbol: "printer", label: "Print",
+                          action: #selector(ashokanPrint(_:)))
         case ItemID.exportPDF:
             return button(identifier, symbol: "square.and.arrow.up", label: "Export as PDF",
                           action: #selector(exportPDF(_:)))
