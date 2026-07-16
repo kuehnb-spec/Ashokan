@@ -15,6 +15,12 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
     private var suggesting = false
     private var suggestButton: NSButton!
     private var reviewAccessory: NSTitlebarAccessoryViewController!
+    private var formatAccessory: NSTitlebarAccessoryViewController!
+    private var statusBarView: NSView!
+    private var statusBarHeightConstraint: NSLayoutConstraint!
+    private weak var formatToolbarButton: NSButton?
+    private weak var reviewToolbarButton: NSButton?
+    private weak var sourceToolbarButton: NSButton?
     private var showingCommentsMargin = false
     private var showCommentsButton: NSButton!
     private var acceptMenuButton: NSPopUpButton!
@@ -55,9 +61,11 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         rootVC.view = NSView()
         rootVC.addChild(splitVC)
         let statusBar = buildStatusBar()
+        statusBarView = statusBar
         splitVC.view.translatesAutoresizingMaskIntoConstraints = false
         rootVC.view.addSubview(splitVC.view)
         rootVC.view.addSubview(statusBar)
+        statusBarHeightConstraint = statusBar.heightAnchor.constraint(equalToConstant: 24)
         NSLayoutConstraint.activate([
             splitVC.view.topAnchor.constraint(equalTo: rootVC.view.topAnchor),
             splitVC.view.leadingAnchor.constraint(equalTo: rootVC.view.leadingAnchor),
@@ -66,7 +74,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             statusBar.leadingAnchor.constraint(equalTo: rootVC.view.leadingAnchor),
             statusBar.trailingAnchor.constraint(equalTo: rootVC.view.trailingAnchor),
             statusBar.bottomAnchor.constraint(equalTo: rootVC.view.bottomAnchor),
-            statusBar.heightAnchor.constraint(equalToConstant: 24),
+            statusBarHeightConstraint,
         ])
         window.contentViewController = rootVC
         // Setting contentViewController resizes the window to the content's
@@ -85,16 +93,28 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         toolbar.allowsUserCustomization = false
         window.toolbar = toolbar
 
-        let formatAccessory = NSTitlebarAccessoryViewController()
+        formatAccessory = NSTitlebarAccessoryViewController()
         formatAccessory.layoutAttribute = .bottom
         formatAccessory.view = buildFormatBar()
         window.addTitlebarAccessoryViewController(formatAccessory)
+
+        // Bar visibility preferences survive relaunch (default: both shown).
+        if UserDefaults.standard.object(forKey: "AshokanShowFormatBar") != nil,
+           !UserDefaults.standard.bool(forKey: "AshokanShowFormatBar") {
+            formatAccessory.isHidden = true
+        }
+        if UserDefaults.standard.object(forKey: "AshokanShowStatusBar") != nil,
+           !UserDefaults.standard.bool(forKey: "AshokanShowStatusBar") {
+            statusBar.isHidden = true
+            statusBarHeightConstraint.constant = 0
+        }
 
         reviewAccessory = NSTitlebarAccessoryViewController()
         reviewAccessory.layoutAttribute = .bottom
         reviewAccessory.view = buildReviewBar()
         reviewAccessory.isHidden = true
         window.addTitlebarAccessoryViewController(reviewAccessory)
+        updateBarButtonStates()
 
         wireUp()
     }
@@ -759,6 +779,15 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         if menuItem.action == #selector(toggleReviewBar(_:)) {
             menuItem.state = isReviewBarVisible ? .on : .off
         }
+        if menuItem.action == #selector(toggleFormatBar(_:)) {
+            menuItem.state = isFormatBarVisible ? .on : .off
+        }
+        if menuItem.action == #selector(toggleStatusBar(_:)) {
+            menuItem.state = isStatusBarVisible ? .on : .off
+        }
+        if menuItem.action == #selector(toggleSourcePane(_:)) {
+            menuItem.state = isSourcePaneVisible ? .on : .off
+        }
         return true
     }
 
@@ -787,6 +816,47 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
             sourceVC.setText(sourceText())
         }
         sourceItem.animator().isCollapsed.toggle()
+        updateBarButtonStates()
+    }
+
+    var isSourcePaneVisible: Bool { !sourceItem.isCollapsed }
+
+    // MARK: - Bar visibility (View menu + stateful toolbar buttons)
+
+    @objc func toggleFormatBar(_ sender: Any?) {
+        formatAccessory.isHidden.toggle()
+        UserDefaults.standard.set(!formatAccessory.isHidden, forKey: "AshokanShowFormatBar")
+        updateBarButtonStates()
+    }
+
+    var isFormatBarVisible: Bool { !formatAccessory.isHidden }
+
+    @objc func toggleStatusBar(_ sender: Any?) {
+        statusBarView.isHidden.toggle()
+        statusBarHeightConstraint.constant = statusBarView.isHidden ? 0 : 24
+        UserDefaults.standard.set(!statusBarView.isHidden, forKey: "AshokanShowStatusBar")
+    }
+
+    var isStatusBarVisible: Bool { !statusBarView.isHidden }
+
+    /// Toolbar buttons for toggleable bars show accent tint while their bar
+    /// is visible — the state is legible at a glance.
+    /// AppKit builds toolbar items during init, before the titlebar
+    /// accessories exist — bail until everything is in place.
+    func updateBarButtonStates() {
+        guard formatAccessory != nil, reviewAccessory != nil, sourceItem != nil else { return }
+        setBarButton(formatToolbarButton, symbol: "textformat", on: isFormatBarVisible)
+        setBarButton(reviewToolbarButton, symbol: "checklist", on: isReviewBarVisible)
+        setBarButton(sourceToolbarButton, symbol: "curlybraces", on: isSourcePaneVisible)
+    }
+
+    /// The toolbar draws template symbols in its own color, ignoring
+    /// contentTintColor — bake the accent into the image instead.
+    private func setBarButton(_ btn: NSButton?, symbol: String, on: Bool) {
+        guard let btn else { return }
+        let color: NSColor = on ? .controlAccentColor : .labelColor
+        btn.image = NSImage(systemSymbolName: symbol, accessibilityDescription: btn.toolTip)?
+            .withSymbolConfiguration(.init(paletteColors: [color]))
     }
 
     // MARK: - Format bar (second tier, below the toolbar)
@@ -1035,6 +1105,7 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         if reviewAccessory.isHidden == shouldShow {
             reviewAccessory.isHidden = !shouldShow
         }
+        updateBarButtonStates()
     }
 
     @objc func toggleReviewBar(_ sender: Any?) {
@@ -1057,13 +1128,14 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         static let print = NSToolbarItem.Identifier("ashokan.print")
         static let exportPDF = NSToolbarItem.Identifier("ashokan.exportPDF")
         static let recents = NSToolbarItem.Identifier("ashokan.recents")
+        static let format = NSToolbarItem.Identifier("ashokan.format")
         static let review = NSToolbarItem.Identifier("ashokan.review")
         static let source = NSToolbarItem.Identifier("ashokan.source")
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [ItemID.save, ItemID.print, ItemID.exportPDF, ItemID.recents,
-         .flexibleSpace, ItemID.review, ItemID.source]
+         .flexibleSpace, ItemID.format, ItemID.review, ItemID.source]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -1092,11 +1164,24 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
                               action: Selector(("showWelcome:")))
             item.target = nil   // responder chain → the app delegate
             return item
+        case ItemID.format:
+            let (item, btn) = stateButton(identifier, symbol: "textformat", label: "Format Bar",
+                                          action: #selector(toggleFormatBar(_:)))
+            formatToolbarButton = btn
+            updateBarButtonStates()
+            return item
         case ItemID.review:
-            return button(identifier, symbol: "checklist", label: "Review Bar",
-                          action: #selector(toggleReviewBar(_:)))
+            let (item, btn) = stateButton(identifier, symbol: "checklist", label: "Review Bar",
+                                          action: #selector(toggleReviewBar(_:)))
+            reviewToolbarButton = btn
+            updateBarButtonStates()
+            return item
         case ItemID.source:
-            return button(identifier, symbol: "curlybraces", label: "Source", action: #selector(toggleSourcePane(_:)))
+            let (item, btn) = stateButton(identifier, symbol: "curlybraces", label: "Source Pane",
+                                          action: #selector(toggleSourcePane(_:)))
+            sourceToolbarButton = btn
+            updateBarButtonStates()
+            return item
         default:
             return nil
         }
@@ -1162,5 +1247,23 @@ final class DocumentWindowController: NSWindowController, NSToolbarDelegate, NSM
         item.target = self
         item.action = action
         return item
+    }
+
+    /// A toolbar button whose NSButton we keep, so its icon can be tinted
+    /// with the accent color while the bar it toggles is visible.
+    private func stateButton(
+        _ identifier: NSToolbarItem.Identifier,
+        symbol: String,
+        label: String,
+        action: Selector
+    ) -> (NSToolbarItem, NSButton) {
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        let btn = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: label)!,
+                           target: self, action: action)
+        btn.bezelStyle = .texturedRounded
+        item.view = btn
+        item.label = label
+        item.toolTip = "Show or hide the \(label.lowercased())"
+        return (item, btn)
     }
 }
