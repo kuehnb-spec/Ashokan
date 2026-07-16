@@ -63,5 +63,18 @@ xcrun stapler validate "$APP"
 spctl --assess --type execute --verbose=2 "$APP" || true
 
 ditto -c -k --keepParent "$APP" "$ZIP"
-echo "== Done: $ZIP (signed, notarized, stapled) =="
+
+echo "== Building DMG (drag-to-Applications installer) =="
+DMG="dist/Ashokan-${VERSION}.dmg"
+STAGE="$(mktemp -d)"
+cp -R "$APP" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "Ashokan" -srcfolder "$STAGE" -ov -format UDZO "$DMG" > /dev/null
+rm -rf "$STAGE"
+codesign --force --timestamp --sign "$IDENTITY" "$DMG"
+echo "== Notarizing DMG =="
+xcrun notarytool submit "$DMG" --keychain-profile AshokanNotary --wait
+xcrun stapler staple "$DMG"
+
+echo "== Done: $DMG + $ZIP (signed, notarized, stapled) =="
 echo "Install locally with: rm -rf /Applications/Ashokan.app && ditto -xk $ZIP /Applications/"
