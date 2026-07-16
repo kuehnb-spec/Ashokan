@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.2 — July 16, 2026
+- **Every bar is now discoverable** (Brant's design): the View menu lists
+  Format Bar, Review Bar, Comments in Margin, Source Pane, and Status Bar
+  with checkmarks; the matching toolbar buttons tint with the system accent
+  color while their bar is visible. Format and status bar preferences persist.
+- **Installs like a Mac app**: releases now ship a notarized drag-to-
+  Applications .dmg alongside the .zip.
+
 ## 0.10.1 — July 14, 2026
 - **Print** (File > Print…, ⌘P, and a toolbar button) — somehow we shipped
   ten versions of a document editor without it (thanks, Brant). Uses the

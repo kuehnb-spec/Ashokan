@@ -220,10 +220,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // View
         let viewMenu = NSMenu(title: "View")
-        viewMenu.addItem(withTitle: "Toggle Source", action: Selector(("toggleSourcePane:")), keyEquivalent: "/")
-        let reviewBar = viewMenu.addItem(withTitle: "Show Review Bar",
+        // Every bar, one place, checkmarks for what's on — plus a matching
+        // toolbar button that tints with the accent color while its bar shows.
+        viewMenu.addItem(withTitle: "Format Bar",
+                         action: Selector(("toggleFormatBar:")), keyEquivalent: "")
+        let reviewBar = viewMenu.addItem(withTitle: "Review Bar",
                                          action: Selector(("toggleReviewBar:")), keyEquivalent: "r")
         reviewBar.keyEquivalentModifierMask = [.command, .shift]
+        viewMenu.addItem(withTitle: "Comments in Margin",
+                         action: Selector(("toggleCommentsMargin:")), keyEquivalent: "")
+        viewMenu.addItem(withTitle: "Source Pane",
+                         action: Selector(("toggleSourcePane:")), keyEquivalent: "/")
+        viewMenu.addItem(withTitle: "Status Bar",
+                         action: Selector(("toggleStatusBar:")), keyEquivalent: "")
         viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Zoom In", action: Selector(("zoomIn:")), keyEquivalent: "=")
         viewMenu.addItem(withTitle: "Zoom Out", action: Selector(("zoomOut:")), keyEquivalent: "-")
